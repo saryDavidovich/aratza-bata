@@ -61,6 +61,7 @@ button:hover{background:#1d4ed8}
   <select name="engine">
     <option value="auto">אוטומטי (לפי סוג הקובץ)</option>
     <option value="gemini">תמלול - Gemini (מנוע רגיל)</option>
+    <option value="gemini_no_thinking">תמלול - Gemini בלי חשיבה (thinking_budget=0)</option>
     <option value="alefbot">תמלול - AlefBot (מנוע פרימיום)</option>
     <option value="gemini_ocr">קלדן כתב יד - Gemini</option>
     <option value="claude_ocr">קלדן כתב יד - Claude</option>

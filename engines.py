@@ -43,6 +43,10 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_no_thinking':
+            public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
+            text = _gemini_transcribe(public_url, language, thinking_budget=0)
+            _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'alefbot':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             _alefbot_run(public_url, original_filename, language, result_email)
@@ -205,8 +209,10 @@ def _gemini_ocr(filepath, original_filename):
 
 # ---------------------------------------------------------------- תמלול אודיו/וידאו
 
-def _gemini_transcribe(url, language='he'):
-    """גרסה מפושטת (מעבר יחיד, בלי פיצול לחלקים - טוב לקבצים עד ~15 דקות)."""
+def _gemini_transcribe(url, language='he', thinking_budget=None):
+    """גרסה מפושטת (מעבר יחיד, בלי פיצול לחלקים - טוב לקבצים עד ~15 דקות).
+    thinking_budget=None -> התנהגות ברירת מחדל של גמיני (חשיבה מלאה).
+    thinking_budget=0    -> מכבה חשיבה לגמרי, בדיוק כמו שכבר עשינו בקלדן."""
     from google import genai
     from google.genai import types as gtypes
 
@@ -235,15 +241,30 @@ def _gemini_transcribe(url, language='he'):
 - שמור על מינוח תורני נכון, ארמית, ראשי תיבות וגרסאות.
 - החזר רק את הטקסט המתומלל ללא הערות נוספות."""
 
+    config = None
+    if thinking_budget is not None:
+        config = gtypes.GenerateContentConfig(
+            thinking_config=gtypes.ThinkingConfig(thinking_budget=thinking_budget)
+        )
+
     for attempt in range(3):
         try:
-            response = client.models.generate_content(
+            kwargs = dict(
                 model='gemini-2.5-pro',
                 contents=[
                     gtypes.Part.from_bytes(data=audio_content, mime_type=mime_type),
                     prompt,
                 ]
             )
+            if config is not None:
+                kwargs['config'] = config
+            response = client.models.generate_content(**kwargs)
+            try:
+                thoughts = response.usage_metadata.thoughts_token_count or 0
+                total = response.usage_metadata.total_token_count
+                log.info(f"Gemini transcribe usage (thinking_budget={thinking_budget}): thoughts={thoughts}, total={total}")
+            except Exception:
+                pass
             return (response.text or '').strip()
         except Exception as e:
             log.warning(f"Gemini transcribe attempt {attempt + 1} failed: {e}")

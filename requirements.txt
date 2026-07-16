@@ -1,0 +1,8 @@
+flask
+requests
+gunicorn
+sendgrid
+anthropic
+openai
+google-genai
+PyMuPDF

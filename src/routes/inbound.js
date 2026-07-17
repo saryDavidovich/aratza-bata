@@ -40,7 +40,7 @@ function countWords(str = '') {
   return str.trim().split(/\s+/).filter(Boolean).length;
 }
 
-const { requiresPayment, priceFor, generatePaymentToken } = require('../paymentUtil');
+const { requiresPayment, priceFor, generatePaymentToken, generateLeadToken } = require('../paymentUtil');
 const { getBaseUrl } = require('../appSettings');
 
 // שדה ה-"to" של SendGrid מגיע בפורמט כמו: "Name <ask+parenting@yourdomain.com>"
@@ -126,6 +126,14 @@ function resolveColorValue(raw, palette) {
 function resolveLinkValue(raw) {
   const trimmed = (raw || '').trim();
   return /^https?:\/\/\S+$/i.test(trimmed) ? trimmed : null;
+}
+
+// בשורת "קישור:" במייל, במקום URL אפשר גם לכתוב את המילה "ליד" (או
+// "lead") - זה שקול לבחירה ברדיו "ליד" בטופס האתר: לא URL חיצוני, אלא
+// דף מילוי פרטים גנרי שהמערכת מארחת בעצמה (ראה routes/leads.js).
+function isLeadKeyword(raw) {
+  const trimmed = (raw || '').trim().toLowerCase();
+  return trimmed === 'ליד' || trimmed === 'lead';
 }
 
 // מסיר כל הופעה מדויקת של טקסטי ההוראה שהמערכת עצמה הזינה מראש לתוך
@@ -224,10 +232,13 @@ router.post('/inbound', upload.any(), async (req, res) => {
       // החופשי הישן של צבע (בלי קישור, כי השדה הזה לא היה קיים אז).
       // שימו לב: קישורים שמופיעים בטקסט החופשי של המודעה עצמה כבר לא
       // הופכים ללחיצים אוטומטית - רק מה שהוזן במפורש בשורת "קישור:".
+      // בשורת "קישור:" אפשר גם לכתוב "ליד" במקום URL - ראה isLeadKeyword.
       let bodyText;
       let bgColor = null;
       let textColor = null;
       let linkUrl = null;
+      let linkType = 'website';
+      let leadToken = null;
 
       if (type === 'ad' && (tier === 'plus' || tier === 'premium')) {
         let palette = [];
@@ -238,7 +249,12 @@ router.post('/inbound', upload.any(), async (req, res) => {
           bodyText = stripKnownInstructions(structured.body, list);
           const resolvedColor = resolveColorValue(structured.colorRaw, palette);
           if (resolvedColor) { bgColor = resolvedColor; textColor = pickReadableTextColor(resolvedColor); }
-          linkUrl = resolveLinkValue(structured.linkRaw);
+          if (isLeadKeyword(structured.linkRaw)) {
+            linkType = 'lead';
+            leadToken = generateLeadToken();
+          } else {
+            linkUrl = resolveLinkValue(structured.linkRaw);
+          }
         } else {
           bodyText = stripKnownInstructions(text, list);
           const colorRequest = extractRequestedColor(bodyText, palette);
@@ -253,11 +269,11 @@ router.post('/inbound', upload.any(), async (req, res) => {
       }
 
       // מודעה מודגשת/פרימיום עם מחיר מוגדר לרשימה זו (כולל תוספת מחיר של
-      // קישור, אם צורף) - לא נכנסת ישר לתור, אלא ל"ממתינה לתשלום" (ראה
-      // src/paymentUtil.js + routes/payment.js, אותה לוגיקה בדיוק כמו
-      // בטופס האתר). ללקוח שנרשם דרך המייל שולחים בחזרה מייל עם קישור
-      // לדף התשלום, כי אין לו דף תגובה מיידי כמו בטופס.
-      const hasLink = !!linkUrl;
+      // קישור/ליד, אם צורף) - לא נכנסת ישר לתור, אלא ל"ממתינה לתשלום"
+      // (ראה src/paymentUtil.js + routes/payment.js, אותה לוגיקה בדיוק
+      // כמו בטופס האתר). ללקוח שנרשם דרך המייל שולחים בחזרה מייל עם
+      // קישור לדף התשלום, כי אין לו דף תגובה מיידי כמו בטופס.
+      const hasLink = linkType === 'lead' || !!linkUrl;
       const needsPayment = type === 'ad' && requiresPayment(list, tier, hasLink);
       const status = needsPayment ? 'pending_payment' : 'pending';
       const paymentToken = needsPayment ? generatePaymentToken() : null;
@@ -265,11 +281,11 @@ router.post('/inbound', upload.any(), async (req, res) => {
       const paymentStatus = needsPayment ? 'pending' : 'not_required';
 
       db.prepare(`
-        INSERT INTO items (list_id, type, status, from_email, subject, body_raw, word_count, paid_tier, images_json, bg_color, text_color, link_url, payment_token, payment_amount, payment_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO items (list_id, type, status, from_email, subject, body_raw, word_count, paid_tier, images_json, bg_color, text_color, link_url, link_type, lead_token, payment_token, payment_amount, payment_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         list.id, type, status, fromEmail, subject, bodyText, countWords(bodyText), tier,
-        JSON.stringify(attachedImages), bgColor, textColor, linkUrl,
+        JSON.stringify(attachedImages), bgColor, textColor, linkUrl, linkType, leadToken,
         paymentToken, paymentAmount, paymentStatus
       );
 

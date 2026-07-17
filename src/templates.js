@@ -374,25 +374,25 @@ function renderActionButtons(list, accent) {
   }
   if (list.show_ads_plus) {
     const linkNote = Number(list.link_price_plus) > 0
-      ? ` צירוף קישור (שהופך את כל המודעה ללחיצה) כרוך בתוספת ${Number(list.link_price_plus)} ש"ח.`
+      ? ` צירוף קישור/ליד (שהופך את כל המודעה ללחיצה) כרוך בתוספת ${Number(list.link_price_plus)} ש"ח.`
       : ' אפשר גם לצרף קישור - לחיצה על המודעה תעביר אליו.';
     buttons.push(renderHoverButton(accent, {
       buttonStyle: btnStyle(accent, false),
       label: 'פרסום מודעה מודגשת',
       mailtoUrl: mailto('adsplus', list.slug, 'מודעה מודגשת', adBodyTemplate()),
-      explanation: `המודעה תפורסם בתוך מסגרת צבעונית בולטת. במייל שנפתח יש שלוש שורות למילוי: תוכן המודעה, צבע רקע (אופציונלי), וקישור (אופציונלי).${linkNote}`,
+      explanation: `המודעה תפורסם בתוך מסגרת צבעונית בולטת. במייל שנפתח יש שלוש שורות למילוי: תוכן המודעה, צבע רקע (אופציונלי), וקישור (אופציונלי - כתבו כתובת אתר, או את המילה "ליד" כדי שקוראים ימלאו טופס יצירת קשר שיישלח אליכם).${linkNote}`,
       extraHtml: renderColorSwatchesHtml(list)
     }));
   }
   if (list.show_ads_premium) {
     const linkNote = Number(list.link_price_premium) > 0
-      ? ` צירוף קישור (שהופך את כל המודעה ללחיצה) כרוך בתוספת ${Number(list.link_price_premium)} ש"ח.`
+      ? ` צירוף קישור/ליד (שהופך את כל המודעה ללחיצה) כרוך בתוספת ${Number(list.link_price_premium)} ש"ח.`
       : ' אפשר גם לצרף קישור - לחיצה על המודעה תעביר אליו.';
     buttons.push(renderHoverButton(accent, {
       buttonStyle: btnStyle(accent, false),
       label: 'פרסום מודעה פרימיום',
       mailtoUrl: mailto('adspremium', list.slug, 'מודעה פרימיום', adBodyTemplate()),
-      explanation: `אפשר לצרף תמונה או גיף כקובץ מצורף למייל. במייל שנפתח יש שלוש שורות למילוי: תוכן המודעה, צבע רקע (אופציונלי), וקישור (אופציונלי).${linkNote}`,
+      explanation: `אפשר לצרף תמונה או גיף כקובץ מצורף למייל. במייל שנפתח יש שלוש שורות למילוי: תוכן המודעה, צבע רקע (אופציונלי), וקישור (אופציונלי - כתבו כתובת אתר, או את המילה "ליד" כדי שקוראים ימלאו טופס יצירת קשר שיישלח אליכם).${linkNote}`,
       extraHtml: renderColorSwatchesHtml(list)
     }));
   }

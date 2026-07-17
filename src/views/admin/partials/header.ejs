@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="utf-8">
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'ניהול' %></title>
+  <link rel="stylesheet" href="/admin.css">
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+  <script>
+    // מזריקים אוטומטית שדה חבוי עם טוקן ה-CSRF לכל טופס POST בעמוד -
+    // כך שאין צורך לערוך ידנית כל טופס בכל view של הניהול בנפרד. ראה
+    // src/csrf.js לבדיקה בצד השרת.
+    document.addEventListener('DOMContentLoaded', function () {
+      var token = document.querySelector('meta[name="csrf-token"]').content;
+      document.querySelectorAll('form').forEach(function (form) {
+        if ((form.method || '').toLowerCase() !== 'post') return;
+        if (form.querySelector('input[name="_csrf"]')) return;
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = '_csrf';
+        input.value = token;
+        form.appendChild(input);
+      });
+    });
+  </script>
+</head>
+<body class="with-sidebar">
+  <div class="app-shell">
+    <nav class="sidebar">
+      <div class="sidebar-brand">הרשימות שלי</div>
+
+      <a class="side-link <%= (typeof page !== 'undefined' && page === 'dashboard') ? 'active' : '' %>" href="/admin">לוח בקרה</a>
+      <a class="side-link <%= (typeof page !== 'undefined' && page === 'new-list') ? 'active' : '' %>" href="/admin/lists/new">+ נושא חדש</a>
+      <a class="side-link <%= (typeof page !== 'undefined' && page === 'payment-settings') ? 'active' : '' %>" href="/admin/payment-settings">ניהול קופה (נדרים פלוס)</a>
+      <a class="side-link <%= (typeof page !== 'undefined' && page === 'payment-log') ? 'active' : '' %>" href="/admin/payment-log">יומן CallBack</a>
+
+      <div class="sidebar-divider"></div>
+
+      <% (typeof allLists !== 'undefined' ? allLists : []).forEach(l => { %>
+        <div class="sidebar-list-group">
+          <div class="sidebar-list-name">
+            <span class="dot" style="background:<%= l.accent_color %>;"></span><%= l.name %>
+          </div>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'queue') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/queue">תור אישור</a>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'compose-qa') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/compose/qa">כתיבת שו"ת</a>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'compose-topic') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/compose/topic">כתיבת נושא</a>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'compose-ad') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/compose/ad">כתיבת מודעה</a>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'preview') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/preview" target="_blank">תצוגה מקדימה</a>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'subscribers') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/subscribers">מנויים</a>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'history') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/history">היסטוריה</a>
+          <a class="side-sublink <%= (typeof activeListId !== 'undefined' && activeListId == l.id && page === 'settings') ? 'active' : '' %>" href="/admin/lists/<%= l.id %>/settings">הגדרות</a>
+        </div>
+      <% }) %>
+
+      <div class="sidebar-divider"></div>
+      <form method="POST" action="/admin/logout"><button class="side-link as-button" type="submit">יציאה</button></form>
+    </nav>
+
+    <main class="content">

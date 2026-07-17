@@ -1,0 +1,39 @@
+<%- include('partials/header', { pageTitle: 'היסטוריה - ' + list.name, page: 'history', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'history' }) %>
+
+  <% if (flash) { %>
+    <div class="card" style="background:#eefaf3;border-color:#8fd9b6;">✓ <%= flash %></div>
+  <% } %>
+
+  <% if (issues.length === 0) { %>
+    <div class="card">עדיין לא נשלח אף גיליון לרשימה זו.</div>
+  <% } %>
+
+  <% issues.forEach(issue => { %>
+    <div class="card">
+      <div class="list-row" style="border-bottom:none;">
+        <span>נשלח ב-<%= issue.sent_at_display %> (שעון ישראל) · <%= issue.recipient_count %> נמענים</span>
+        <div style="display:flex;gap:8px;">
+          <a class="btn secondary" href="/admin/lists/<%= list.id %>/history/<%= issue.id %>" target="_blank">צפייה בגיליון</a>
+          <button class="btn secondary" type="button" onclick="document.getElementById('resend-<%= issue.id %>').style.display = document.getElementById('resend-<%= issue.id %>').style.display === 'none' ? 'block' : 'none';">שליחה נוספת</button>
+        </div>
+      </div>
+
+      <div id="resend-<%= issue.id %>" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #eceae3;">
+        <form method="POST" action="/admin/lists/<%= list.id %>/history/<%= issue.id %>/resend">
+          <div id="emails-<%= issue.id %>">
+            <input type="email" name="emails" placeholder="כתובת מייל" required />
+          </div>
+          <button type="button" class="btn secondary" style="margin-bottom:10px;"
+            onclick="const c=document.getElementById('emails-<%= issue.id %>'); const i=document.createElement('input'); i.type='email'; i.name='emails'; i.placeholder='כתובת מייל נוספת'; c.appendChild(i);">
+            + הוסף כתובת נוספת
+          </button>
+          <br>
+          <button class="btn" type="submit">שלח את הגיליון הזה לכתובות שהוזנו</button>
+        </form>
+      </div>
+    </div>
+  <% }) %>
+
+<%- include('partials/footer') %>

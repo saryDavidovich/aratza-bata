@@ -1,0 +1,27 @@
+<%- include('partials/header', { pageTitle: 'כתיבת נושא - ' + list.name, page: 'compose-topic', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'compose-topic' }) %>
+
+  <div class="card">
+    <p style="color:#888780;font-size:13px;margin-top:0;">
+      "נושא" הוא תוכן חופשי (מאמר/הודעה) שלא בפורמט שאלה-תשובה - למשל עדכון, טיפ, או פוסט קצר.
+      נכנס ישר כ"מאושר" ומופיע בגיליון הבא.
+    </p>
+    <form method="POST" action="/admin/lists/<%= list.id %>/compose/topic">
+      <label>כותרת (אופציונלי)</label>
+      <input type="text" name="subject" />
+
+      <label>תוכן הנושא</label>
+      <div class="fmt-toolbar">
+        <button type="button" onclick="wrapSelection('body','**')"><b>ב</b></button>
+        <button type="button" onclick="wrapSelection('body','*')"><i>נ</i></button>
+        <button type="button" onclick="wrapSelection('body','__')"><u>ק</u></button>
+      </div>
+      <textarea id="body" name="body" rows="6" required></textarea>
+
+      <button class="btn" type="submit">הוסף לגיליון הבא</button>
+    </form>
+  </div>
+
+<script src="/toolbar.js"></script>
+<%- include('partials/footer') %>

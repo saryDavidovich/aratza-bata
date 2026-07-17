@@ -1,0 +1,36 @@
+<%- include('partials/header', { pageTitle: 'יצירת קשר', page: 'contact', allLists: allLists }) %>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h1>הודעות יצירת קשר</h1>
+    <a class="btn secondary" href="/admin/">&larr; חזרה ללוח הבקרה</a>
+  </div>
+
+  <% if (messages.length === 0) { %>
+    <div class="card">אין עדיין הודעות יצירת קשר.</div>
+  <% } %>
+
+  <% messages.forEach(m => { %>
+    <div class="item-box">
+      <div class="item-meta" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>
+          מאת <%= m.from_email %>
+          <% if (m.list_name) { %>
+            <span class="pill" style="background:<%= m.list_accent %>22;color:<%= m.list_accent %>;">מרשימת "<%= m.list_name %>"</span>
+          <% } else { %>
+            <span class="pill">לא משויך לרשימה מסוימת</span>
+          <% } %>
+        </span>
+        <span class="item-meta"><%= m.created_at_display %></span>
+      </div>
+      <% if (m.subject) { %><div style="font-weight:600;margin-top:6px;"><%= m.subject %></div><% } %>
+      <div style="font-size:14px;line-height:1.6;margin-top:4px;white-space:pre-wrap;"><%= m.body %></div>
+      <div class="actions" style="margin-top:10px;">
+        <a class="btn secondary" href="mailto:<%= m.from_email %>?subject=<%= encodeURIComponent('Re: ' + (m.subject || 'הפנייה שלך')) %>">להשיב במייל</a>
+        <form method="POST" action="/admin/contact/<%= m.id %>/delete" onsubmit="return confirm('למחוק את ההודעה הזו?');" style="display:inline;">
+          <button class="btn danger" type="submit">מחק</button>
+        </form>
+      </div>
+    </div>
+  <% }) %>
+
+<%- include('partials/footer') %>

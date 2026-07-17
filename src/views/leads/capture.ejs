@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"><title>השאירו פרטים - <%= item.list_name %></title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f6f5f1; direction:rtl; margin:0; }
+  .wrap { max-width:440px; margin:40px auto; background:#fff; border:1px solid #e3e1d8; border-radius:10px; padding:24px; }
+  h1 { font-size:20px; color:#2c2c2a; }
+  input, textarea { width:100%; padding:9px; border:1px solid #d3d1c7; border-radius:6px; margin-bottom:12px; font-family:inherit; box-sizing:border-box; }
+  .btn { background:<%= item.accent_color %>; color:#fff; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; font-size:14px; width:100%; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><%= item.subject || 'השאירו פרטים ונחזור אליכם' %></h1>
+
+  <% if (sent) { %>
+    <p style="color:#0f6e56;">הפרטים נשלחו! ניצור איתך קשר בהקדם.</p>
+  <% } else { %>
+    <% if (error) { %><p style="color:#c04828;"><%= error %></p><% } %>
+    <p style="color:#666;font-size:14px;">השאירו שם וטלפון ונציג יחזור אליכם.</p>
+    <form method="POST">
+      <label>שם מלא</label>
+      <input type="text" name="name" required />
+      <label>טלפון</label>
+      <input type="tel" name="phone" required />
+      <label>הערה (אופציונלי)</label>
+      <textarea name="note" rows="3"></textarea>
+      <button class="btn" type="submit">שליחה</button>
+    </form>
+  <% } %>
+</div>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"><title>פרסום מודעה - <%= list.name %></title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f6f5f1; direction:rtl; margin:0; }
+  .wrap { max-width:480px; margin:40px auto; background:#fff; border:1px solid #e3e1d8; border-radius:10px; padding:24px; }
+  h1 { font-size:20px; color:#2c2c2a; }
+  input, textarea, select { width:100%; padding:9px; border:1px solid #d3d1c7; border-radius:6px; margin-bottom:12px; font-family:inherit; box-sizing:border-box; }
+  .btn { background:<%= list.accent_color %>; color:#fff; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; font-size:14px; }
+  .hint { font-size:12px; color:#888780; margin-top:-6px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>פרסום מודעה בלוח: <%= list.name %></h1>
+
+  <% if (sent) { %>
+    <p style="color:#0f6e56;">המודעה נשלחה ותופיע בגיליון הקרוב לאחר אישור.</p>
+  <% } else { %>
+    <% if (error) { %><p style="color:#c04828;"><%= error %></p><% } %>
+    <form method="POST" action="/ads/<%= list.slug %>" enctype="multipart/form-data">
+      <label>המייל שלך</label>
+      <input type="email" name="email" required />
+
+      <div id="clientDetails" style="display:<%= (requestedTier === 'plus' || requestedTier === 'premium') ? 'block' : 'none' %>;">
+        <label>שם מלא</label>
+        <input type="text" name="client_name" id="clientNameField" />
+        <label>טלפון</label>
+        <input type="tel" name="phone" id="phoneField" />
+        <div class="hint">נדרש למודעה בתשלום - הפרטים מועברים לנדרים פלוס יחד עם התשלום, לצורך זיהוי העסקה בדוחות.</div>
+      </div>
+
+      <label>כותרת קצרה (אופציונלי)</label>
+      <input type="text" name="subject" />
+
+      <label>תוכן המודעה</label>
+      <div style="display:flex;gap:4px;margin-bottom:4px;">
+        <button type="button" onclick="wrapSelection('body','**')" style="border:1px solid #d3d1c7;background:#fff;border-radius:4px;width:28px;height:26px;cursor:pointer;"><b>ב</b></button>
+        <button type="button" onclick="wrapSelection('body','*')" style="border:1px solid #d3d1c7;background:#fff;border-radius:4px;width:28px;height:26px;cursor:pointer;"><i>נ</i></button>
+        <button type="button" onclick="wrapSelection('body','__')" style="border:1px solid #d3d1c7;background:#fff;border-radius:4px;width:28px;height:26px;cursor:pointer;"><u>ק</u></button>
+      </div>
+      <textarea id="body" name="body" rows="5" required></textarea>
+
+      <label>סוג מודעה</label>
+      <select name="paid_tier" id="tierSelect" onchange="toggleTierFields()">
+        <option value="free" <%= requestedTier === 'free' ? 'selected' : '' %>>מודעת שורה (חינם)</option>
+        <option value="plus" <%= requestedTier === 'plus' ? 'selected' : '' %>>מודעה מודגשת<%= (typeof plusPrice !== 'undefined' && plusPrice > 0) ? ' - ' + plusPrice + ' ש"ח' : '' %></option>
+        <option value="premium" <%= requestedTier === 'premium' ? 'selected' : '' %>>מודעה פרימיום<%= (typeof premiumPrice !== 'undefined' && premiumPrice > 0) ? ' - ' + premiumPrice + ' ש"ח' : '' %></option>
+      </select>
+      <div class="hint" id="freeHint" style="display:<%= requestedTier === 'free' ? 'block' : 'none' %>;">עד <%= wordLimit %> מילים בחינם.</div>
+      <div class="hint" id="totalPriceHint" style="display:<%= (paidEnabled && requestedTier !== 'free') ? 'block' : 'none' %>;font-weight:bold;"></div>
+
+      <% if (paidEnabled) { %>
+        <div id="colorFields" style="display:<%= (requestedTier === 'plus' || requestedTier === 'premium') ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;">
+          <label>צבע רקע</label>
+          <input type="color" name="bg_color" value="#FFF6E5" style="height:36px;padding:2px;" />
+          <label>צבע טקסט</label>
+          <input type="color" name="text_color" value="#2C2C2A" style="height:36px;padding:2px;" />
+        </div>
+        <div id="linkField" style="display:<%= (requestedTier === 'plus' || requestedTier === 'premium') ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:8px;">
+          <label>קישור לחיצה על המודעה (אופציונלי)</label>
+          <div style="display:flex;gap:16px;margin-bottom:8px;font-size:14px;">
+            <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="website" checked onchange="toggleLinkType()" style="width:auto;margin:0;" /> קישור לאתר</label>
+            <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="lead" onchange="toggleLinkType()" style="width:auto;margin:0;" /> ליד - טופס יצירת קשר</label>
+          </div>
+          <div id="websiteLinkRow">
+            <input type="url" name="link_url" id="linkUrlField" placeholder="https://" dir="ltr" style="text-align:left;" />
+          </div>
+          <div id="leadLinkHint" style="display:none;font-size:12px;color:#888780;margin-bottom:8px;">
+            הקוראים ילחצו וימלאו טופס קצר (שם + טלפון) שיישלח אליך - במקום להיכנס לאתר חיצוני.
+          </div>
+          <div class="hint" id="linkHint">אם ממלאים, לחיצה על כל המודעה בגיליון תעביר לכתובת הזו.</div>
+        </div>
+        <div id="imageField" style="display:<%= requestedTier === 'premium' ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:8px;">
+          <label>תמונה או גיף (אופציונלי, זמין רק לפרימיום)</label>
+          <input type="file" name="image" accept="image/*" />
+          <label>קישור לחיצה על התמונה (אופציונלי)</label>
+          <input type="url" name="image_link" placeholder="https://" dir="ltr" style="text-align:left;" />
+          <div class="hint">אם ממלאים, לחיצה על התמונה בגיליון תעביר לכתובת הזו (למשל לאתר שלכם).</div>
+        </div>
+      <% } %>
+
+      <button class="btn" type="submit">פרסם מודעה</button>
+      <div class="hint">מודעה מודגשת/פרימיום בתשלום: לאחר השליחה תועבר לדף תשלום מאובטח, והמודעה תפורסם לאחר אישור התשלום.</div>
+    </form>
+  <% } %>
+</div>
+<script src="/toolbar.js"></script>
+<script>
+  var TIER_PRICES = { plus: <%= plusPrice || 0 %>, premium: <%= premiumPrice || 0 %> };
+  var LINK_PRICES = { plus: <%= linkPricePlus || 0 %>, premium: <%= linkPricePremium || 0 %> };
+
+  function currentLinkType() {
+    var radios = document.getElementsByName('link_type');
+    for (var i = 0; i < radios.length; i++) if (radios[i].checked) return radios[i].value;
+    return 'website';
+  }
+
+  function toggleLinkType() {
+    var isLead = currentLinkType() === 'lead';
+    var websiteRow = document.getElementById('websiteLinkRow');
+    var leadHint = document.getElementById('leadLinkHint');
+    if (websiteRow) websiteRow.style.display = isLead ? 'none' : 'block';
+    if (leadHint) leadHint.style.display = isLead ? 'block' : 'none';
+    updateTotalPrice();
+  }
+
+  function updateTotalPrice() {
+    var tier = document.getElementById('tierSelect').value;
+    var totalHint = document.getElementById('totalPriceHint');
+    if (!totalHint) return;
+    if (tier !== 'plus' && tier !== 'premium') { totalHint.style.display = 'none'; return; }
+    var linkField = document.getElementById('linkUrlField');
+    var hasLink = currentLinkType() === 'lead' || (linkField && linkField.value.trim().length > 0);
+    var total = TIER_PRICES[tier] + (hasLink ? LINK_PRICES[tier] : 0);
+    if (total <= 0) { totalHint.style.display = 'none'; return; }
+    totalHint.textContent = hasLink
+      ? 'סה"כ לתשלום: ' + total + ' ש"ח (כולל תוספת קישור)'
+      : 'סה"כ לתשלום: ' + total + ' ש"ח';
+    totalHint.style.display = 'block';
+  }
+
+  function toggleTierFields() {
+    var tier = document.getElementById('tierSelect').value;
+    var isPaid = (tier === 'plus' || tier === 'premium');
+    document.getElementById('freeHint').style.display = (tier === 'free') ? 'block' : 'none';
+    // colorFields/linkField/imageField קיימים ב-DOM רק אם paidEnabled=true
+    // (ראה <% if (paidEnabled) %> למעלה) - בלי הבדיקה הזו, כשהתשלום כבוי,
+    // getElementById מחזיר null וההמשך (כולל clientDetails) לא היה
+    // מתבצע בכלל בגלל שגיאה שקטה בקונסול.
+    var colorFields = document.getElementById('colorFields');
+    if (colorFields) colorFields.style.display = isPaid ? 'block' : 'none';
+    var linkField = document.getElementById('linkField');
+    if (linkField) {
+      linkField.style.display = isPaid ? 'block' : 'none';
+      var linkPrice = tier === 'plus' ? <%= linkPricePlus || 0 %> : <%= linkPricePremium || 0 %>;
+      var linkHint = document.getElementById('linkHint');
+      if (linkHint) {
+        linkHint.textContent = linkPrice > 0
+          ? 'אם ממלאים, לחיצה על כל המודעה בגיליון תעביר לכתובת הזו. תוספת של ' + linkPrice + ' ש"ח למחיר המודעה.'
+          : 'אם ממלאים, לחיצה על כל המודעה בגיליון תעביר לכתובת הזו.';
+      }
+    }
+    var imageField = document.getElementById('imageField');
+    if (imageField) imageField.style.display = (tier === 'premium') ? 'block' : 'none';
+    document.getElementById('clientDetails').style.display = isPaid ? 'block' : 'none';
+    document.getElementById('clientNameField').required = isPaid;
+    document.getElementById('phoneField').required = isPaid;
+    updateTotalPrice();
+  }
+  // מעדכן את סה"כ המחיר גם בלייב תוך כדי הקלדה בשדה הקישור - לא רק
+  // בשינוי סוג המודעה - כדי שהתוספת של הקישור תופיע מיד, לא רק אחרי
+  // שליחה (ראה גם linkHint למעלה, שמסביר את התוספת בטקסט).
+  var linkUrlFieldEl = document.getElementById('linkUrlField');
+  if (linkUrlFieldEl) linkUrlFieldEl.addEventListener('input', updateTotalPrice);
+  // מפעילים גם בטעינת הדף - למקרה שהגעתם עם ?tier=plus בכתובת, כדי
+  // שהשדות יופיעו כבר מההתחלה ולא רק אחרי שינוי ידני בבורר.
+  toggleTierFields();
+</script>
+</body>
+</html>

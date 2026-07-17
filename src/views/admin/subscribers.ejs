@@ -1,0 +1,62 @@
+<%- include('partials/header', { pageTitle: 'מנויים - ' + list.name, page: 'subscribers', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'subscribers' }) %>
+
+  <% if (flash) { %>
+    <div class="card" style="background:#eefaf3;border-color:#8fd9b6;">✓ <%= flash %></div>
+  <% } %>
+
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+    <span><strong><%= subscribers.length %></strong> מנויים פעילים ברשימה זו.</span>
+    <a class="btn secondary" href="/admin/lists/<%= list.id %>/subscribers/export.xlsx">הורדת אקסל של מנויי הרשימה</a>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">הוספת מנוי בודד</h2>
+    <form method="POST" action="/admin/lists/<%= list.id %>/subscribers/add" style="display:flex;gap:8px;">
+      <input type="email" name="email" placeholder="כתובת מייל" required style="margin-bottom:0;" />
+      <button class="btn" type="submit">הוסף</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">העלאת קובץ אקסל / CSV עם הרבה מיילים בבת אחת</h2>
+    <p style="font-size:12px;color:#888780;margin-top:0;">המערכת מזהה אוטומטית כל תא שנראה ככתובת מייל תקינה, בכל עמודה.</p>
+    <form method="POST" action="/admin/lists/<%= list.id %>/subscribers/bulk-upload" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;">
+      <input type="file" name="file" accept=".xlsx,.xls,.csv" required style="margin-bottom:0;" />
+      <button class="btn" type="submit">העלה</button>
+    </form>
+  </div>
+
+  <% if (subscribers.length === 0) { %>
+    <div class="card">עדיין אין מנויים. שתף את קישור ההרשמה: <code>/subscribe/<%= list.slug %></code></div>
+  <% } %>
+
+  <% if (subscribers.length > 0) { %>
+    <form id="bulk-remove-form" method="POST" action="/admin/lists/<%= list.id %>/subscribers/bulk-remove" onsubmit="return confirm('להסיר את כל המנויים המסומנים?');"></form>
+
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+      <label style="display:flex;align-items:center;gap:8px;margin:0;">
+        <input type="checkbox" id="select-all-subs" style="width:auto;margin:0;" onclick="document.querySelectorAll('.sub-check').forEach(c => c.checked = this.checked)" />
+        בחר הכל
+      </label>
+      <button class="btn danger" type="submit" form="bulk-remove-form" style="padding:6px 14px;font-size:13px;">הסר מנויים נבחרים</button>
+    </div>
+  <% } %>
+
+  <% subscribers.forEach(sub => { %>
+    <div class="list-row">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <input class="sub-check" type="checkbox" name="ids[]" value="<%= sub.id %>" form="bulk-remove-form" style="width:auto;margin:0;" />
+        <%= sub.email %>
+      </span>
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span class="item-meta">נרשם ב-<%= sub.created_at_display %></span>
+        <form method="POST" action="/admin/lists/<%= list.id %>/subscribers/<%= sub.id %>/remove" onsubmit="return confirm('להסיר את <%= sub.email %> מהרשימה?');">
+          <button class="btn danger" type="submit" style="padding:4px 10px;font-size:12px;">הסר</button>
+        </form>
+      </span>
+    </div>
+  <% }) %>
+
+<%- include('partials/footer') %>

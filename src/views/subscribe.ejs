@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"><title>הרשמה - <%= list.name %></title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f6f5f1; direction:rtl; margin:0; }
+  .wrap { max-width:420px; margin:60px auto; background:#fff; border:1px solid #e3e1d8; border-radius:10px; padding:24px; text-align:center; }
+  h1 { font-size:20px; color:#2c2c2a; }
+  p { color:#5f5e5a; font-size:14px; }
+  input { width:100%; padding:10px; border:1px solid #d3d1c7; border-radius:6px; margin-bottom:12px; box-sizing:border-box; font-family:inherit; }
+  .btn { background:<%= list.accent_color %>; color:#fff; border:none; padding:10px 24px; border-radius:6px; cursor:pointer; font-size:14px; width:100%; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:<%= list.accent_color %>;margin-bottom:8px;"></span>
+  <h1>הרשמה לרשימת: <%= list.name %></h1>
+  <% if (list.description) { %><p><%= list.description %></p><% } %>
+
+  <% if (subscribed) { %>
+    <p style="color:#0f6e56;">נרשמת בהצלחה! תתחיל לקבל עדכונים בקרוב.</p>
+  <% } else { %>
+    <form method="POST" action="/subscribe/<%= list.slug %>">
+      <input type="email" name="email" placeholder="כתובת המייל שלך" required />
+      <button class="btn" type="submit">הרשמה</button>
+    </form>
+  <% } %>
+
+  <div style="margin-top:16px;">
+    <a href="/archive/<%= list.slug %>" style="color:#888780;font-size:13px;">לצפייה בגיליונות קודמים &larr;</a>
+  </div>
+</div>
+</body>
+</html>

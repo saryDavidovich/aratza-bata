@@ -1,0 +1,55 @@
+<%- include('partials/header', { pageTitle: 'אימות תשלום ידני', page: 'payment-log', allLists: allLists }) %>
+
+  <div class="card" style="max-width:720px;">
+    <h2 style="margin-top:0;font-size:17px;">מודעה #<%= item.id %></h2>
+    <div style="font-size:14px;color:#555;margin-bottom:14px;">
+      <%= item.from_email %> - <%= item.paid_tier === 'premium' ? 'פרימיום' : 'מודגשת' %>
+      <% if (item.subject) { %>- "<%= item.subject %>"<% } %><br>
+      סכום שאמור להיות שולם: <b><%= item.payment_amount %> ש"ח</b><br>
+      מזהה תשלום (Param1): <code><%= item.payment_token %></code><br>
+      סטטוס תשלום נוכחי: <b><%= item.payment_status %></b>
+    </div>
+
+    <% if (!result.ok) { %>
+      <div style="background:#fdf1ee;border:1px solid #f0c9bb;color:#c04828;padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:14px;">
+        לא ניתן היה למשוך הסטוריית עסקאות אוטומטית: <%= result.error %>
+        <br>אפשר עדיין לאשר ידנית למטה, אחרי בדיקה ישירה בממשק הניהול של נדרים פלוס.
+      </div>
+    <% } else { %>
+      <div class="pill" style="display:block;margin-bottom:10px;line-height:1.6;">
+        20 העסקאות האחרונות שנמצאו בהסטוריה האמיתית של נדרים פלוס (מהחדשה לישנה) - חפשו סכום <b><%= item.payment_amount %> ש"ח</b> בזמן שמתאים לשליחת המודעה.
+      </div>
+      <% if (result.transactions.length === 0) { %>
+        <div style="font-size:13px;color:#888780;">לא נמצאו עסקאות בהסטוריה.</div>
+      <% } %>
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead><tr style="text-align:right;border-bottom:1px solid #e3e1d8;">
+          <th style="padding:4px;">תאריך</th><th style="padding:4px;">שם</th><th style="padding:4px;">סכום</th><th style="padding:4px;">אישור</th>
+        </tr></thead>
+        <tbody>
+        <% result.transactions.slice(0, 20).forEach(t => { %>
+          <tr style="border-bottom:1px solid #f0efe9;<%= String(t.Amount) === String(item.payment_amount) ? 'background:#eaf6f1;' : '' %>">
+            <td style="padding:4px;"><%= t.TransactionTime %></td>
+            <td style="padding:4px;"><%= t.ClientName %></td>
+            <td style="padding:4px;"><%= t.Amount %> ש"ח</td>
+            <td style="padding:4px;"><%= t.Confirmation %></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+
+    <div class="sidebar-divider" style="background:#e3e1d8;margin:20px 0;"></div>
+
+    <% if (item.payment_status === 'paid') { %>
+      <div style="color:#0f6e56;font-size:14px;">התשלום כבר מסומן כמאושר.</div>
+    <% } else { %>
+      <form method="POST" action="/admin/items/<%= item.id %>/mark-paid">
+        <label>סיבת אישור ידני (חובה - יישמר לתיעוד)</label>
+        <textarea name="reason" rows="2" required placeholder='למשל: "אומת מול הסטוריית עסקאות נדרים פלוס - עסקה של 25 ש&quot;ח ב-15/7 בשעה 10:32, אישור 123456"'></textarea>
+        <button class="btn" type="submit" style="background:#c04828;" onclick="return confirm('לאשר תשלום ידנית? פעולה זו תסמן את המודעה כשולמה ותכניס אותה לתור האישור.');">אשר תשלום ידנית</button>
+      </form>
+    <% } %>
+  </div>
+
+<%- include('partials/footer') %>

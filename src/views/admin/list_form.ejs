@@ -1,0 +1,23 @@
+<%- include('partials/header', { pageTitle: 'נושא חדש', page: 'new-list', allLists: allLists }) %>
+
+  <h1>יצירת נושא / רשימה חדשה</h1>
+  <div class="card" style="max-width:420px;">
+    <form method="POST" action="/admin/lists/new">
+      <label>שם הרשימה (מוצג ללקוחות)</label>
+      <input type="text" name="name" placeholder="לדוגמה: הורות ומשפחה" required />
+
+      <label>מזהה טכני קצר באנגלית (ישמש בכתובות המייל)</label>
+      <input type="text" name="slug" placeholder="parenting" pattern="[a-z0-9_-]+" required />
+
+      <label>תיאור קצר (פנימי)</label>
+      <input type="text" name="description" placeholder="אופציונלי" />
+
+      <label>צבע הדגשה לרשימה זו (רק גוון, המיתוג נשאר אחיד)</label>
+      <input type="color" name="accent_color" value="#1D9E75" style="height:40px;padding:2px;" />
+
+      <button class="btn" type="submit">צור רשימה</button>
+      <a href="/admin" style="margin-inline-start:10px;">ביטול</a>
+    </form>
+  </div>
+
+<%- include('partials/footer') %>

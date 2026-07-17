@@ -1,0 +1,55 @@
+<%- include('partials/header', { pageTitle: 'לוח בקרה', page: 'dashboard', allLists: lists }) %>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+    <h1>לוח בקרה</h1>
+    <div style="display:flex;gap:8px;">
+      <a class="btn secondary" href="/admin/contact">יצירת קשר<% if (contactCount > 0) { %> <span class="pill pending"><%= contactCount %></span><% } %></a>
+      <a class="btn secondary" href="/admin/subscribers/export-all.xlsx">הורדת אקסל - כל המנויים במערכת</a>
+      <a class="btn" href="/admin/lists/new">+ נושא חדש</a>
+    </div>
+  </div>
+
+  <% if (flash) { %>
+    <div class="card" style="background:#eefaf3;border-color:#8fd9b6;">✓ <%= flash %></div>
+  <% } %>
+
+  <% if (lists.length === 0) { %>
+    <div class="card">עדיין אין רשימות. לחץ "נושא חדש" כדי להתחיל.</div>
+  <% } %>
+
+  <% lists.forEach(list => { %>
+    <div class="card">
+      <div class="list-row" style="border-bottom:none;">
+        <div>
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<%= list.accent_color %>;margin-inline-end:6px;"></span>
+          <strong><%= list.name %></strong>
+          <span class="pill"><%= list.subscriber_count %> מנויים</span>
+          <% if (list.pending_count > 0) { %>
+            <span class="pill pending"><%= list.pending_count %> ממתינים לאישור</span>
+          <% } %>
+          <% if (!list.active) { %><span class="pill">מושבת</span><% } %>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <a class="btn" href="/admin/lists/<%= list.id %>/queue">תור אישור</a>
+          <a class="btn secondary" href="/admin/lists/<%= list.id %>/preview" target="_blank">תצוגה מקדימה</a>
+          <form method="POST" action="/admin/lists/<%= list.id %>/send-now" onsubmit="return confirm('לשלוח עכשיו גיליון אמיתי לכל המנויים ברשימה זו?');">
+            <button class="btn secondary" type="submit">שלח עכשיו</button>
+          </form>
+          <form method="POST" action="/admin/lists/<%= list.id %>/toggle">
+            <button class="btn secondary" type="submit"><%= list.active ? 'השבת' : 'הפעל' %></button>
+          </form>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#888780;margin-top:6px;">
+        קליטת שאלות: <code>ask+<%= list.slug %>@<%= inboundDomain %></code> ·
+        קליטת מודעות: <code>ads+<%= list.slug %>@<%= inboundDomain %></code> ·
+        טופס מודעה: <a href="/ads/<%= list.slug %>" target="_blank">/ads/<%= list.slug %></a> ·
+        טופס נושא: <a href="/topics/<%= list.slug %>" target="_blank">/topics/<%= list.slug %></a> ·
+        הרשמה: <a href="/subscribe/<%= list.slug %>" target="_blank">/subscribe/<%= list.slug %></a> ·
+        ארכיון: <a href="/archive/<%= list.slug %>" target="_blank">/archive/<%= list.slug %></a> ·
+        <a href="/admin/lists/<%= list.id %>/settings">הגדרות</a>
+      </div>
+    </div>
+  <% }) %>
+
+<%- include('partials/footer') %>

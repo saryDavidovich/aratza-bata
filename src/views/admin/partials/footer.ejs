@@ -1,0 +1,19 @@
+    </main>
+
+    <% if (typeof list !== 'undefined' && list) { %>
+    <aside class="preview-col" data-list-id="<%= list.id %>">
+      <div class="preview-col-inner">
+        <div class="preview-col-title">תצוגה מקדימה חיה</div>
+        <div id="pp-outline-root" class="pp-outline-root">
+          <div class="pp-loading">טוען...</div>
+        </div>
+        <iframe id="pp-iframe" class="pp-iframe" src="/admin/lists/<%= list.id %>/preview" title="תצוגה מקדימה"></iframe>
+      </div>
+    </aside>
+    <% } %>
+  </div>
+  <% if (typeof list !== 'undefined' && list) { %>
+    <script src="/preview-panel.js"></script>
+  <% } %>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<%- include('partials/header', { pageTitle: 'הגדרות - ' + list.name, page: 'settings', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'settings' }) %>
+
+  <div class="card" style="max-width:520px;">
+    <form method="POST" action="/admin/lists/<%= list.id %>/settings">
+
+      <label>שם הרשימה</label>
+      <input type="text" name="name" value="<%= list.name %>" required />
+
+      <label>תיאור פנימי</label>
+      <input type="text" name="description" value="<%= list.description || '' %>" />
+
+      <label>צבע הדגשה</label>
+      <input type="color" name="accent_color" value="<%= list.accent_color %>" style="height:40px;padding:2px;" />
+
+      <div class="sidebar-divider" style="background:#e3e1d8;margin:16px 0;"></div>
+
+      <div class="pill" style="display:block;margin-bottom:12px;line-height:1.6;">
+        סדר הפריטים בגיליון (שאלות/מודעות/נושאים, בכל שילוב) נקבע כעת בגרירה חופשית בתצוגה המקדימה שבצד - לא כאן.
+      </div>
+
+      <div class="sidebar-divider" style="background:#e3e1d8;margin:16px 0;"></div>
+
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" name="show_ask_button" value="1" <%= list.show_ask_button ? 'checked' : '' %> style="width:auto;margin:0;" />
+        הצג כפתור "לשליחת שאלה חדשה" בתוך הגיליון
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <input type="checkbox" name="show_ads_free" value="1" <%= list.show_ads_free ? 'checked' : '' %> style="width:auto;margin:0;" />
+        הצג כפתור "מודעת שורה" (חינם) בתוך הגיליון
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <input type="checkbox" name="show_ads_plus" value="1" <%= list.show_ads_plus ? 'checked' : '' %> style="width:auto;margin:0;" />
+        הצג כפתור "מודעה מודגשת" בתוך הגיליון
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <input type="checkbox" name="show_ads_premium" value="1" <%= list.show_ads_premium ? 'checked' : '' %> style="width:auto;margin:0;" />
+        הצג כפתור "מודעה פרימיום" בתוך הגיליון
+      </label>
+
+      <div class="sidebar-divider" style="background:#e3e1d8;margin:16px 0;"></div>
+
+      <div class="pill" style="display:block;margin-bottom:12px;line-height:1.6;">
+        מחיר בשקלים למודעה בתשלום ברשימה הזו. 0 = בחינם (כמו היום). כשמוגדר מחיר, המודעה עוברת דרך תשלום מאובטח (נדרים פלוס) ונכנסת לתור האישור רק לאחר שהתשלום אושר בפועל.
+      </div>
+      <label>מחיר למודעה מודגשת (ש"ח)</label>
+      <input type="number" name="plus_price" min="0" step="1" value="<%= list.plus_price || 0 %>" />
+      <label>מחיר למודעה פרימיום (ש"ח)</label>
+      <input type="number" name="premium_price" min="0" step="1" value="<%= list.premium_price || 0 %>" />
+
+      <div class="pill" style="display:block;margin:12px 0;line-height:1.6;">
+        תוספת מחיר (ש"ח) כשלקוח מצרף קישור למודעה מודגשת/פרימיום (הופך את כל המודעה ללחיצה). 0 = בלי תוספת.
+      </div>
+      <label>תוספת קישור למודעה מודגשת (ש"ח)</label>
+      <input type="number" name="link_price_plus" min="0" step="1" value="<%= list.link_price_plus || 0 %>" />
+      <label>תוספת קישור למודעה פרימיום (ש"ח)</label>
+      <input type="number" name="link_price_premium" min="0" step="1" value="<%= list.link_price_premium || 0 %>" />
+
+      <div class="pill" style="display:block;margin:12px 0;line-height:1.6;">
+        לידים: כשמפרסם בוחר "ליד" במקום קישור לאתר, הקוראים ממלאים טופס קצר (שם+טלפון) שנשמר בפאנל הניהול. אין חיוב אוטומטי לליד - זה רק מחיר-ייחוס לחיוב ידני שלך.
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;width:auto;">
+        <input type="checkbox" name="lead_notify_advertiser" value="1" style="width:auto;" <%= list.lead_notify_advertiser ? 'checked' : '' %> />
+        לשלוח למפרסם מייל על כל ליד שנכנס
+      </label>
+      <label>מחיר-ייחוס לליד (ש"ח, לתזכורת בלבד - לא נגבה אוטומטית)</label>
+      <input type="number" name="lead_price" min="0" step="1" value="<%= list.lead_price || 0 %>" />
+
+      <div class="sidebar-divider" style="background:#e3e1d8;margin:16px 0;"></div>
+
+      <label>יום ושעה לשליחה אוטומטית שבועית</label>
+      <div style="font-size:11px;color:#888780;margin:-4px 0 8px;">
+        לפי שעון ישראל - קיץ/חורף מחושב אוטומטית, אין צורך לשנות כלום פעמיים בשנה.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <select name="send_day" style="flex:1;">
+          <% ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'].forEach((dayLabel, i) => { %>
+            <option value="<%= i %>" <%= list.send_day === i ? 'selected' : '' %>>יום <%= dayLabel %></option>
+          <% }) %>
+        </select>
+        <select name="send_hour">
+          <% for (let h = 0; h < 24; h++) { %>
+            <option value="<%= h %>" <%= list.send_hour === h ? 'selected' : '' %>><%= String(h).padStart(2,'0') %></option>
+          <% } %>
+        </select>
+        <span style="align-self:center;">:</span>
+        <select name="send_minute">
+          <% [0,5,10,15,20,25,30,35,40,45,50,55].forEach(m => { %>
+            <option value="<%= m %>" <%= list.send_minute === m ? 'selected' : '' %>><%= String(m).padStart(2,'0') %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="sidebar-divider" style="background:#e3e1d8;margin:16px 0;"></div>
+
+      <label>פלטת צבעים ללקוחות</label>
+      <div style="font-size:11px;color:#888780;margin:-4px 0 8px;">
+        לקוח שמפרסם מודעה מודגשת/פרימיום יכול לכתוב במייל שורה כמו "צבע: <%= palette[0] ? palette[0].name : 'כחול' %>" -
+        זה בדיוק הגוון שייבחר. שנו/הוסיפו/הסירו צבעים לפי הצורך.
+      </div>
+      <div id="colorRows">
+        <% palette.forEach(c => { %>
+          <div class="color-row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <input type="text" name="color_name[]" value="<%= c.name %>" placeholder="שם הצבע" style="flex:1;margin:0;" />
+            <input type="color" name="color_hex[]" value="<%= c.hex %>" style="height:36px;width:56px;padding:2px;margin:0;" />
+            <button type="button" onclick="this.closest('.color-row').remove()" class="btn danger" style="padding:4px 10px;margin:0;">הסר</button>
+          </div>
+        <% }) %>
+      </div>
+      <button type="button" class="btn" style="margin-top:4px;" onclick="addColorRow()">+ הוסף צבע</button>
+
+      <button class="btn" type="submit" style="margin-top:16px;">שמור הגדרות</button>
+    </form>
+  </div>
+
+<script>
+function addColorRow() {
+  const row = document.createElement('div');
+  row.className = 'color-row';
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.name = 'color_name[]';
+  nameInput.placeholder = 'שם הצבע';
+  nameInput.style.cssText = 'flex:1;margin:0;';
+
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.name = 'color_hex[]';
+  colorInput.value = '#FFFFFF';
+  colorInput.style.cssText = 'height:36px;width:56px;padding:2px;margin:0;';
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn danger';
+  removeBtn.style.cssText = 'padding:4px 10px;margin:0;';
+  removeBtn.textContent = 'הסר';
+  removeBtn.onclick = () => row.remove();
+
+  row.appendChild(nameInput);
+  row.appendChild(colorInput);
+  row.appendChild(removeBtn);
+  document.getElementById('colorRows').appendChild(row);
+}
+</script>
+<%- include('partials/footer') %>

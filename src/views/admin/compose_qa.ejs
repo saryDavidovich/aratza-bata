@@ -1,0 +1,34 @@
+<%- include('partials/header', { pageTitle: 'כתיבת שו"ת - ' + list.name, page: 'compose-qa', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'compose-qa' }) %>
+
+  <div class="card">
+    <p style="color:#888780;font-size:13px;margin-top:0;">
+      כתיבה ישירה כאן מדלגת על תור האישור - הפריט נכנס ישר כ"מאושר" ויופיע בגיליון הבא, כי אתה כותב אותו בעצמך.
+    </p>
+    <form method="POST" action="/admin/lists/<%= list.id %>/compose/qa">
+      <label>כותרת השאלה</label>
+      <input type="text" name="subject" required />
+
+      <label>גוף השאלה</label>
+      <div class="fmt-toolbar">
+        <button type="button" onclick="wrapSelection('question_body','**')"><b>ב</b></button>
+        <button type="button" onclick="wrapSelection('question_body','*')"><i>נ</i></button>
+        <button type="button" onclick="wrapSelection('question_body','__')"><u>ק</u></button>
+      </div>
+      <textarea id="question_body" name="question_body" rows="3" required></textarea>
+
+      <label>תשובה (אופציונלי - אפשר להשאיר ריק ולהוסיף מאוחר יותר)</label>
+      <div class="fmt-toolbar">
+        <button type="button" onclick="wrapSelection('answer_body','**')"><b>ב</b></button>
+        <button type="button" onclick="wrapSelection('answer_body','*')"><i>נ</i></button>
+        <button type="button" onclick="wrapSelection('answer_body','__')"><u>ק</u></button>
+      </div>
+      <textarea id="answer_body" name="answer_body" rows="4"></textarea>
+
+      <button class="btn" type="submit">הוסף לגיליון הבא</button>
+    </form>
+  </div>
+
+<script src="/toolbar.js"></script>
+<%- include('partials/footer') %>

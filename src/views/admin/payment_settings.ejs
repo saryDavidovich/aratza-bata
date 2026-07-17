@@ -1,0 +1,91 @@
+<%- include('partials/header', { pageTitle: 'ניהול קופה', page: 'payment-settings', allLists: allLists }) %>
+
+  <% if (saved) { %>
+    <div style="background:#eaf6f1;border:1px solid #bfe3d3;color:#0f6e56;padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:14px;max-width:560px;">
+      ההגדרות נשמרו בהצלחה.
+    </div>
+  <% } %>
+
+  <form method="POST" action="/admin/payment-settings">
+    <div class="card" style="max-width:560px;">
+      <h2 style="margin-top:0;font-size:18px;">כתובת האתר הציבורית</h2>
+      <div class="pill" style="display:block;margin-bottom:16px;line-height:1.6;">
+        הכתובת שממנה נבנים כל הקישורים ללקוחות (תשלום, הסרה מרשימה, ארכיון
+        גיליונות) - חשוב שתהיה הדומיין האמיתי שלכם, לא הכתובת האוטומטית
+        שRailway נותן (כמו <code>xxx.up.railway.app</code>), אם חיברתם דומיין משלכם.
+      </div>
+      <label>כתובת בסיס (BASE_URL)</label>
+      <input type="text" name="base_url" value="<%= baseUrl %>" placeholder="https://newsletter.yourdomain.com" dir="ltr" style="text-align:left;" />
+      <% if (envBaseUrl && envBaseUrl !== baseUrl) { %>
+        <div class="hint" style="font-size:12px;color:#888780;margin-top:-6px;margin-bottom:12px;">
+          שים לב: משתנה הסביבה BASE_URL מוגדר לערך אחר (<code><%= envBaseUrl %></code>) - הערך כאן בממשק גובר עליו כל עוד הוא מוגדר.
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card" style="max-width:560px;margin-top:16px;">
+      <h2 style="margin-top:0;font-size:18px;">חיבור נדרים פלוס</h2>
+      <div class="pill" style="display:block;margin-bottom:16px;line-height:1.6;">
+        פרטי החיבור כאן משותפים לכל הרשימות (חשבון נדרים פלוס אחד). המחיר
+        עצמו למודעה מודגשת/פרימיום נקבע בנפרד בהגדרות של כל רשימה.
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:14px;">
+        <span>סטטוס:</span>
+        <% if (configured && enabled) { %>
+          <span style="color:#0f6e56;font-weight:bold;">✓ פעיל - מודעות בתשלום עוברות דרך נדרים פלוס</span>
+        <% } else if (configured && !enabled) { %>
+          <span style="color:#a5760a;font-weight:bold;">⏸ מוגדר אך כבוי - הפעילו את המתג למטה</span>
+        <% } else { %>
+          <span style="color:#c04828;font-weight:bold;">✗ לא מוגדר - השלימו מספר מוסד וטקסט אימות</span>
+        <% } %>
+      </div>
+
+      <label>מספר מוסד (Mosad) - 7 ספרות</label>
+      <input type="text" name="nedarim_mosad" value="<%= mosad %>" placeholder="1234567" />
+
+      <label>טקסט אימות (ApiValid)</label>
+      <input type="text" name="nedarim_api_valid" value="<%= apiValid %>" placeholder="מוצג במסך מפתחות API בתפריט עוד, בממשק נדרים פלוס" />
+      <div class="hint" style="font-size:12px;color:#888780;margin-top:-6px;margin-bottom:12px;">
+        לקבלת מספר מוסד וטקסט אימות: פנו לשירות הלקוחות של נדרים פלוס (office@nedar.im) ובקשו קוד אימות ל-API, ע"י מייל מורשה במוסד.
+      </div>
+
+      <label>סיסמת API (ApiPassword) - מומלץ</label>
+      <input type="text" name="nedarim_api_password" value="<%= apiPassword %>" placeholder="לא חובה, אבל מומלץ" />
+      <div class="hint" style="font-size:12px;color:#888780;margin-top:-6px;margin-bottom:12px;">
+        שונה מ-ApiValid! אישור תשלום אוטומטי לא תלוי בה בדרך כלל (מבוסס על
+        התאמת מזהה עסקה, לא רק כתובת IP) - אבל אם מוגדרת, היא מוסיפה שכבת
+        אימות אוטומטית נוספת (הצלבה חיה מול ההסטוריה האמיתית בנדרים פלוס)
+        למקרי קצה נדירים, ומאפשרת גם צפייה ב"יומן CallBack".
+      </div>
+
+      <label>קטגוריה (Groupe) על כל עסקה מהמערכת</label>
+      <input type="text" name="nedarim_category" value="<%= category %>" placeholder="דיוור במייל" />
+      <div class="hint" style="font-size:12px;color:#888780;margin-top:-6px;margin-bottom:12px;">
+        מסומן על כל עסקה שנוצרת ממודעות בתשלום - כדי שיהיה קל להבדיל בדוחות
+        של נדרים פלוס בין הכנסות מרשימות התפוצה לבין שאר ההכנסות של המוסד.
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" name="enabled" value="1" <%= enabled ? 'checked' : '' %> style="width:auto;margin:0;" />
+        הפעל תשלומים (מודעות עם מחיר > 0 יעברו דרך תשלום לפני כניסה לתור)
+      </label>
+      <% if (envEnabled) { %>
+        <div class="hint" style="font-size:12px;color:#888780;margin-top:4px;">
+          שים לב: התכונה מופעלת גם דרך משתנה הסביבה PAID_FEATURES_ENABLED - גם אם תבטלו כאן את הסימון, היא תישאר פעילה עד שתשנו את משתנה הסביבה.
+        </div>
+      <% } %>
+    </div>
+
+    <button class="btn" type="submit" style="margin-top:16px;max-width:560px;">שמור הכל</button>
+  </form>
+
+  <div class="card" style="max-width:560px;margin-top:16px;">
+    <h2 style="margin-top:0;font-size:16px;">כתובת ה-CallBack שיש למסור לנדרים פלוס</h2>
+    <div class="pill" style="display:block;line-height:1.6;">
+      אם נדרש אצלכם רישום מראש של כתובת ה-webhook, מסרו את הכתובת הבאה:
+    </div>
+    <code style="display:block;background:#f6f5f1;padding:10px 14px;border-radius:6px;margin-top:8px;font-size:13px;direction:ltr;text-align:left;"><%= baseUrl %>/payment/webhook</code>
+  </div>
+
+<%- include('partials/footer') %>

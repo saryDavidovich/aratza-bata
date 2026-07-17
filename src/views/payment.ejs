@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8">
+<title>תשלום עבור מודעה - <%= list.name %></title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f6f5f1; direction:rtl; margin:0; }
+  .wrap { max-width:480px; margin:40px auto; background:#fff; border:1px solid #e3e1d8; border-radius:10px; padding:24px; }
+  h1 { font-size:20px; color:#2c2c2a; }
+  .summary { background:#f9f8f4; border:1px solid #e3e1d8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:14px; color:#555; }
+  .summary b { color:#2c2c2a; }
+  .msg-ok { color:#0f6e56; }
+  .msg-err { color:#c04828; }
+  #NedarimFrame { width:100%; border:none; height:0; }
+  #payBtn { background:<%= list.accent_color %>; color:#fff; border:none; padding:12px 20px; border-radius:6px; cursor:pointer; font-size:15px; width:100%; }
+  #payBtn:disabled { opacity:0.6; cursor:default; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>תשלום עבור מודעה - <%= list.name %></h1>
+
+  <style>input, .btn2 { width:100%; padding:9px; border:1px solid #d3d1c7; border-radius:6px; margin-bottom:12px; font-family:inherit; box-sizing:border-box; }</style>
+
+  <% if (status === 'paid') { %>
+    <p class="msg-ok">התשלום כבר התקבל בהצלחה! המודעה נכנסה לתור האישור ותפורסם בגיליון הקרוב.</p>
+
+  <% } else if (status === 'not_configured') { %>
+    <p class="msg-err">מערכת התשלומים אינה מוגדרת כרגע. אנא פנה למנהל הרשימה.</p>
+
+  <% } else if (status === 'needs_details') { %>
+    <div class="summary">
+      מודעה <b><%= item.paid_tier === 'premium' ? 'פרימיום' : 'מודגשת' %></b>
+      <% if (item.subject) { %>- "<%= item.subject %>"<% } %><br>
+      סכום לתשלום: <b><%= item.payment_amount %> ש"ח</b>
+    </div>
+    <p style="font-size:14px;color:#555;">לפני המעבר לתשלום, נא למלא פרטים ליצירת קשר (נדרשים על ידי נדרים פלוס לצורך העסקה):</p>
+    <% if (error) { %><p class="msg-err"><%= error %></p><% } %>
+    <form method="POST" action="/payment/<%= item.payment_token %>/details">
+      <label>שם מלא</label>
+      <input type="text" name="client_name" required value="<%= item.client_name || '' %>" />
+      <label>טלפון</label>
+      <input type="tel" name="phone" required value="<%= item.phone || '' %>" />
+      <button class="btn2" type="submit" style="background:<%= list.accent_color %>;color:#fff;border:none;cursor:pointer;">המשך לתשלום</button>
+    </form>
+
+  <% } else { %>
+    <div class="summary">
+      מודעה <b><%= item.paid_tier === 'premium' ? 'פרימיום' : 'מודגשת' %></b>
+      <% if (item.subject) { %>- "<%= item.subject %>"<% } %><br>
+      סכום לתשלום: <b><%= item.payment_amount %> ש"ח</b>
+    </div>
+
+    <div id="statusMsg"><p>טוען טופס תשלום מאובטח...</p></div>
+    <iframe id="NedarimFrame" scrolling="no" style="display:none;"></iframe>
+    <button id="payBtn" type="button" style="display:none;margin-top:10px;" onclick="submitPayment()">בצע תשלום</button>
+
+    <script>
+      // רישום המאזין וטעינת ה-src של האייפרם חייבים לקרות פעם אחת בלבד
+      // בחיי הדף (ראה אזהרת נדרים פלוס בתיעוד) - אחרת עלולה להיגרם פנייה
+      // כפולה וחיוב כפול. לכן הכל קורה פעם אחת ב-init(), לא בתוך onclick.
+      var frame = document.getElementById('NedarimFrame');
+      var payBtn = document.getElementById('payBtn');
+      var statusMsg = document.getElementById('statusMsg');
+      var transactionId = null;
+
+      window.addEventListener('message', readPostMessage);
+
+      function postToNedarim(data) {
+        frame.contentWindow.postMessage(data, '*');
+      }
+
+      function readPostMessage(event) {
+        if (!event.data || !event.data.Name) return;
+        switch (event.data.Name) {
+          case 'Height':
+            frame.style.height = (parseInt(event.data.Value, 10) + 15) + 'px';
+            break;
+          case 'TransactionResponse':
+            // זו רק חוויית משתמש - האישור האמיתי מגיע ל-webhook בשרת
+            // (ראה src/routes/payment.js), לא נסמכים על ההודעה הזו לבדה.
+            if (event.data.Value && event.data.Value.Status === 'OK') {
+              statusMsg.innerHTML = '<p class="msg-ok">התשלום התקבל! ממתין לאישור סופי... הדף הזה מתעדכן אוטומטית.</p>';
+              payBtn.style.display = 'none';
+              frame.style.display = 'none';
+              setTimeout(function () { location.reload(); }, 4000);
+            } else {
+              var msg = (event.data.Value && event.data.Value.Message) || 'שגיאה לא ידועה';
+              statusMsg.innerHTML = '<p class="msg-err">התשלום נכשל: ' + msg + '</p>';
+              payBtn.disabled = false;
+            }
+            break;
+        }
+      }
+
+      function submitPayment() {
+        if (!transactionId || payBtn.disabled) return;
+        payBtn.disabled = true;
+        statusMsg.innerHTML = '<p>מעבד תשלום...</p>';
+        postToNedarim({ Name: 'FinishTransaction', Value: transactionId });
+      }
+
+      async function init() {
+        try {
+          var resp = await fetch(window.location.pathname + '/start', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }
+          });
+          var data = await resp.json();
+          if (!data.ok) {
+            statusMsg.innerHTML = '<p class="msg-err">שגיאה: ' + (data.error || 'לא ניתן להקים עסקה') + '</p>';
+            return;
+          }
+          transactionId = data.transactionId;
+
+          frame.onload = function () { postToNedarim({ Name: 'GetHeight' }); };
+          frame.src = 'https://www.matara.pro/nedarimplus/iframe/';
+          frame.style.display = 'block';
+          payBtn.style.display = 'block';
+          statusMsg.innerHTML = '<p>הזן פרטי כרטיס אשראי למעלה ולחץ "בצע תשלום".</p>';
+        } catch (err) {
+          statusMsg.innerHTML = '<p class="msg-err">שגיאת תקשורת. רענן את הדף ונסה שוב.</p>';
+        }
+      }
+
+      init();
+    </script>
+  <% } %>
+</div>
+</body>
+</html>

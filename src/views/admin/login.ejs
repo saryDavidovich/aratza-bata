@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"><title>כניסה לניהול</title><link rel="stylesheet" href="/admin.css"></head>
+<body>
+<div class="container" style="max-width:360px;padding-top:80px;">
+  <div class="card">
+    <h1>כניסה לפאנל הניהול</h1>
+    <% if (error) { %><p style="color:#c04828;"><%= error %></p><% } %>
+    <form method="POST" action="/admin/login">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <input type="password" name="password" placeholder="סיסמה" required />
+      <button class="btn" type="submit">כניסה</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

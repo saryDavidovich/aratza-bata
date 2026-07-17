@@ -1,0 +1,12 @@
+<h1><%= list.name %></h1>
+<div class="tabbar">
+  <a href="/admin/lists/<%= list.id %>/queue" class="<%= page === 'queue' ? 'active' : '' %>">תור אישור</a>
+  <a href="/admin/lists/<%= list.id %>/approved" class="<%= page === 'approved' ? 'active' : '' %>">מאושר - טרם נשלח</a>
+  <a href="/admin/lists/<%= list.id %>/compose/qa" class="<%= page === 'compose-qa' ? 'active' : '' %>">כתיבת שו"ת</a>
+  <a href="/admin/lists/<%= list.id %>/compose/topic" class="<%= page === 'compose-topic' ? 'active' : '' %>">כתיבת נושא</a>
+  <a href="/admin/lists/<%= list.id %>/compose/ad" class="<%= page === 'compose-ad' ? 'active' : '' %>">כתיבת מודעה</a>
+  <a href="/admin/lists/<%= list.id %>/preview" target="_blank" class="<%= page === 'preview' ? 'active' : '' %>">תצוגה מקדימה &#8599;</a>
+  <a href="/admin/lists/<%= list.id %>/subscribers" class="<%= page === 'subscribers' ? 'active' : '' %>">מנויים</a>
+  <a href="/admin/lists/<%= list.id %>/history" class="<%= page === 'history' ? 'active' : '' %>">היסטוריה</a>
+  <a href="/admin/lists/<%= list.id %>/settings" class="<%= page === 'settings' ? 'active' : '' %>">הגדרות</a>
+</div>

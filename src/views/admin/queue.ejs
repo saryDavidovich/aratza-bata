@@ -1,0 +1,165 @@
+<%- include('partials/header', { pageTitle: 'תור אישור - ' + list.name, page: 'queue', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'queue' }) %>
+
+  <div class="card" style="margin-bottom:16px;background:#fbfaf6;">
+    <form method="POST" action="/admin/lists/<%= list.id %>/test-send" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0;">
+      <label style="margin:0;font-size:13px;">שליחת ניסיון של הגיליון הבא (לבדיקה בלבד - לא נכנס להיסטוריה ולא נשלח ללקוחות):</label>
+      <input type="email" name="to" placeholder="you@example.com" required style="max-width:240px;margin:0;" />
+      <button class="btn" type="submit" style="margin:0;">שלח ניסיון</button>
+    </form>
+    <% if (testSendResult) { %>
+      <div style="margin-top:8px;font-size:13px;color:#0f6e56;"><%= testSendResult %></div>
+    <% } %>
+    <% if (testSendError) { %>
+      <div style="margin-top:8px;font-size:13px;color:#c04828;"><%= testSendError %></div>
+    <% } %>
+  </div>
+
+  <% if (pendingPaymentAds && pendingPaymentAds.length > 0) { %>
+    <div class="card" style="margin-bottom:16px;background:#fdf8ee;border:1px solid #eadfc0;">
+      <div style="font-size:13px;font-weight:bold;margin-bottom:8px;">
+        ממתינות לתשלום (<%= pendingPaymentAds.length %>) - לא בתור האישור עדיין, ייכנסו אוטומטית לאחר שהתשלום יאושר
+      </div>
+      <% pendingPaymentAds.forEach(ad => { %>
+        <div style="font-size:13px;color:#555;padding:4px 0;border-top:1px solid #eadfc0;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span><%= ad.from_email %> - <%= ad.paid_tier === 'premium' ? 'פרימיום' : 'מודגשת' %> (<%= ad.payment_amount %> ש"ח)
+          <% if (ad.subject) { %>- "<%= ad.subject %>"<% } %></span>
+          <a href="/admin/items/<%= ad.id %>/verify-payment" style="font-size:12px;">התשלום לא נקלט? בדוק ואשר ידנית</a>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if (items.length === 0) { %>
+    <div class="card">אין פריטים ממתינים לאישור כרגע.</div>
+  <% } %>
+
+  <% items.forEach(item => { %>
+    <% if (item.type === 'answer_standalone') { %>
+      <div class="item-box" style="background:#fdfbf5;">
+        <div class="item-meta">
+          תגובה לשאלה שכבר אושרה בעבר · מאת <%= item.from_email %> · <%= item.word_count %> מילים
+        </div>
+        <div style="font-size:12px;color:#888780;background:#f1efe8;padding:8px;border-radius:6px;margin-bottom:8px;">
+          השאלה המקורית: <%= item.parentQuestion ? (item.parentQuestion.subject || (item.parentQuestion.body_edited ?? item.parentQuestion.body_raw)) : '(לא נמצאה)' %>
+        </div>
+        <form method="POST" action="/admin/items/<%= item.id %>/approve">
+          <textarea name="body_edited" rows="4"><%= item.body_edited ?? item.body_raw %></textarea>
+          <input type="hidden" name="subject" value="<%= item.subject || '' %>" />
+          <div class="actions">
+            <button class="btn" type="submit">אשר תגובה</button>
+          </div>
+        </form>
+        <form method="POST" action="/admin/items/<%= item.id %>/reject" style="display:inline;">
+          <button class="btn danger" type="submit">דחה</button>
+        </form>
+      </div>
+    <% } else { %>
+    <div class="item-box">
+      <div class="item-meta">
+        <%= { question: 'שאלה', ad: 'מודעה', article: 'נושא' }[item.type] || item.type %> · מאת <%= item.from_email %> · <%= item.word_count %> מילים
+      </div>
+      <% if (item.type === 'ad') { %>
+      <% if (item.bg_color) { %>
+        <div style="font-size:11px;color:#0f6e56;background:#eaf7f1;padding:6px 8px;border-radius:6px;margin-bottom:8px;">
+          זוהה בקשת צבע במייל מהלקוח - אפשר לשנות למטה לפני האישור.
+        </div>
+      <% } %>
+      <form method="POST" action="/admin/items/<%= item.id %>/approve-ad" enctype="multipart/form-data">
+        <input type="text" name="subject" value="<%= item.subject || '' %>" placeholder="כותרת (אופציונלי)" />
+        <div class="fmt-toolbar">
+          <button type="button" onclick="wrapSelection('body_edited_<%= item.id %>','**')"><b>ב</b></button>
+          <button type="button" onclick="wrapSelection('body_edited_<%= item.id %>','*')"><i>נ</i></button>
+          <button type="button" onclick="wrapSelection('body_edited_<%= item.id %>','__')"><u>ק</u></button>
+        </div>
+        <textarea id="body_edited_<%= item.id %>" name="body_edited" rows="4"><%= item.body_edited ?? item.body_raw %></textarea>
+
+        <label style="font-size:12px;color:#888780;">רמת מודעה</label>
+        <select name="paid_tier" onchange="
+          document.getElementById('colorFields-<%= item.id %>').style.display = (this.value === 'plus' || this.value === 'premium') ? 'block' : 'none';
+          document.getElementById('linkField-<%= item.id %>').style.display = (this.value === 'plus' || this.value === 'premium') ? 'block' : 'none';
+          document.getElementById('imageField-<%= item.id %>').style.display = (this.value === 'premium') ? 'block' : 'none';
+        ">
+          <option value="free" <%= item.paid_tier === 'free' ? 'selected' : '' %>>חינם (מודעת שורה - בלי עיצוב)</option>
+          <option value="plus" <%= item.paid_tier === 'plus' ? 'selected' : '' %>>מודגשת (צבע רקע לבחירה)</option>
+          <option value="premium" <%= item.paid_tier === 'premium' ? 'selected' : '' %>>פרימיום (צבע רקע + תמונה)</option>
+        </select>
+
+        <div id="colorFields-<%= item.id %>" style="display:<%= (item.paid_tier === 'plus' || item.paid_tier === 'premium') ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+          <label>צבע רקע</label>
+          <input type="color" name="bg_color" value="<%= item.bg_color || '#FFF6E5' %>" style="height:36px;padding:2px;" />
+          <label>צבע טקסט</label>
+          <input type="color" name="text_color" value="<%= item.text_color || '#2C2C2A' %>" style="height:36px;padding:2px;" />
+        </div>
+
+        <div id="linkField-<%= item.id %>" style="display:<%= (item.paid_tier === 'plus' || item.paid_tier === 'premium') ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+          <label>קישור לחיצה על המודעה (אופציונלי)</label>
+          <div style="display:flex;gap:16px;margin-bottom:8px;font-size:13px;">
+            <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="website" <%= item.link_type !== 'lead' ? 'checked' : '' %> style="width:auto;margin:0;" /> קישור לאתר</label>
+            <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="lead" <%= item.link_type === 'lead' ? 'checked' : '' %> style="width:auto;margin:0;" /> ליד</label>
+          </div>
+          <input type="url" name="link_url" value="<%= item.link_url || '' %>" placeholder="https://" dir="ltr" style="text-align:left;" />
+        </div>
+
+        <% if (item.paid_tier !== 'free' && (item.from_email || item.phone)) { %>
+          <div style="font-size:12px;color:#888780;margin-top:6px;">
+            פרטי המפרסם: <%= item.from_email || '' %><% if (item.phone) { %> · <%= item.phone %><% } %><% if (item.client_name) { %> · <%= item.client_name %><% } %>
+          </div>
+        <% } %>
+
+        <div id="imageField-<%= item.id %>" style="display:<%= item.paid_tier === 'premium' ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+          <label>תמונה או הנפשה (GIF - אופציונלי, זמין רק לפרימיום)</label>
+          <input type="file" name="image" accept="image/*,.gif" />
+          <label>קישור לחיצה על התמונה (אופציונלי)</label>
+          <input type="url" name="image_link" value="<%= item.image_link || '' %>" placeholder="https://" dir="ltr" style="text-align:left;" />
+        </div>
+
+        <div class="actions">
+          <button class="btn" type="submit">אשר</button>
+        </div>
+      </form>
+      <% } else { %>
+      <form method="POST" action="/admin/items/<%= item.id %>/approve">
+        <input type="text" name="subject" value="<%= item.subject || '' %>" placeholder="כותרת (אופציונלי)" />
+        <div class="fmt-toolbar">
+          <button type="button" onclick="wrapSelection('body_edited_<%= item.id %>','**')"><b>ב</b></button>
+          <button type="button" onclick="wrapSelection('body_edited_<%= item.id %>','*')"><i>נ</i></button>
+          <button type="button" onclick="wrapSelection('body_edited_<%= item.id %>','__')"><u>ק</u></button>
+        </div>
+        <textarea id="body_edited_<%= item.id %>" name="body_edited" rows="4"><%= item.body_edited ?? item.body_raw %></textarea>
+        <div class="actions">
+          <button class="btn" type="submit">אשר</button>
+        </div>
+      </form>
+      <% } %>
+      <form method="POST" action="/admin/items/<%= item.id %>/reject" style="display:inline;">
+        <button class="btn danger" type="submit">דחה</button>
+      </form>
+
+      <% if (item.pendingAnswers && item.pendingAnswers.length) { %>
+        <div style="margin-top:14px;padding-inline-start:16px;border-inline-start:2px solid #eceae3;">
+          <div class="item-meta">תשובות ממתינות לשאלה זו:</div>
+          <% item.pendingAnswers.forEach(ans => { %>
+            <form method="POST" action="/admin/items/<%= ans.id %>/approve" style="margin-bottom:8px;">
+              <div class="item-meta">מאת <%= ans.from_email %></div>
+              <div class="fmt-toolbar">
+                <button type="button" onclick="wrapSelection('ans_body_<%= ans.id %>','**')"><b>ב</b></button>
+                <button type="button" onclick="wrapSelection('ans_body_<%= ans.id %>','*')"><i>נ</i></button>
+                <button type="button" onclick="wrapSelection('ans_body_<%= ans.id %>','__')"><u>ק</u></button>
+              </div>
+              <textarea id="ans_body_<%= ans.id %>" name="body_edited" rows="3"><%= ans.body_edited ?? ans.body_raw %></textarea>
+              <input type="hidden" name="subject" value="" />
+              <div class="actions">
+                <button class="btn" type="submit">אשר תשובה</button>
+              </div>
+            </form>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+    <% } %>
+  <% }) %>
+
+<script src="/toolbar.js"></script>
+<%- include('partials/footer') %>

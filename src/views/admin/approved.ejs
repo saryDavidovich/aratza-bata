@@ -1,0 +1,131 @@
+<%- include('partials/header', { pageTitle: 'מאושר - טרם נשלח - ' + list.name, page: 'approved', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'approved' }) %>
+
+  <div class="card" style="margin-bottom:16px;background:#fbfaf6;font-size:13px;color:#5f5e5a;">
+    כל מה שכבר אושר ועדיין לא נשלח בגיליון. אפשר עדיין לערוך או להסיר כל פריט - למשל אם גיליתם שהתמונה לא מתאימה, שהגיליון נהיה גדול מדי, או סתם רוצים לשנות ניסוח - הכל לפני שזה יוצא ללקוחות.
+    את סדר התצוגה משנים בגרירה בתצוגה המקדימה שבצד.
+  </div>
+
+  <% if (entries.length === 0) { %>
+    <div class="card">אין עדיין תוכן מאושר לגיליון הבא.</div>
+  <% } %>
+
+  <% entries.forEach(entry => { %>
+    <% if (entry.kind === 'qa' || entry.kind === 'followup') { %>
+      <div class="item-box">
+        <div class="item-meta"><%= entry.kind === 'followup' ? 'תגובת המשך לשאלה שנשלחה' : 'שאלה ותשובה' %></div>
+
+        <form method="POST" action="/admin/items/<%= entry.question.id %>/edit">
+          <label style="font-size:12px;color:#888780;">שאלה</label>
+          <input type="text" name="subject" value="<%= entry.question.subject || '' %>" placeholder="כותרת (אופציונלי)" />
+          <textarea name="body_edited" rows="3"><%= entry.question.body_edited ?? entry.question.body_raw %></textarea>
+          <div class="actions">
+            <button class="btn" type="submit">שמור שינויים בשאלה</button>
+          </div>
+        </form>
+        <form method="POST" action="/admin/items/<%= entry.question.id %>/unapprove" style="display:inline;" onsubmit="return confirm('להסיר את השאלה הזו (וגם התשובה) מהגיליון הבא?');">
+          <button class="btn danger" type="submit">הסר שאלה מהגיליון הבא</button>
+        </form>
+
+        <% if (entry.answer) { %>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eceae3;">
+            <form method="POST" action="/admin/items/<%= entry.answer.id %>/edit">
+              <label style="font-size:12px;color:#888780;">תשובה</label>
+              <textarea name="body_edited" rows="3"><%= entry.answer.body_edited ?? entry.answer.body_raw %></textarea>
+              <input type="hidden" name="subject" value="" />
+              <div class="actions">
+                <button class="btn" type="submit">שמור שינויים בתשובה</button>
+              </div>
+            </form>
+            <form method="POST" action="/admin/items/<%= entry.answer.id %>/unapprove" style="display:inline;" onsubmit="return confirm('להסיר רק את התשובה (השאלה תישאר)?');">
+              <button class="btn danger" type="submit">הסר רק את התשובה</button>
+            </form>
+          </div>
+        <% } %>
+      </div>
+    <% } else if (entry.kind === 'ad') { %>
+      <% const item = entry.item; %>
+      <div class="item-box">
+        <div class="item-meta">מודעה · <%= { free: 'חינם', plus: 'מודגשת', premium: 'פרימיום' }[item.paid_tier] %></div>
+        <form method="POST" action="/admin/items/<%= item.id %>/edit-ad" enctype="multipart/form-data">
+          <input type="text" name="subject" value="<%= item.subject || '' %>" placeholder="כותרת (אופציונלי)" />
+          <textarea name="body_edited" rows="3"><%= item.body_edited ?? item.body_raw %></textarea>
+
+          <label style="font-size:12px;color:#888780;">רמת מודעה</label>
+          <select name="paid_tier" onchange="
+            document.getElementById('colorFields-a<%= item.id %>').style.display = (this.value === 'plus' || this.value === 'premium') ? 'block' : 'none';
+            document.getElementById('linkField-a<%= item.id %>').style.display = (this.value === 'plus' || this.value === 'premium') ? 'block' : 'none';
+            document.getElementById('imageField-a<%= item.id %>').style.display = (this.value === 'premium') ? 'block' : 'none';
+          ">
+            <option value="free" <%= item.paid_tier === 'free' ? 'selected' : '' %>>חינם</option>
+            <option value="plus" <%= item.paid_tier === 'plus' ? 'selected' : '' %>>מודגשת</option>
+            <option value="premium" <%= item.paid_tier === 'premium' ? 'selected' : '' %>>פרימיום</option>
+          </select>
+
+          <div id="colorFields-a<%= item.id %>" style="display:<%= (item.paid_tier === 'plus' || item.paid_tier === 'premium') ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+            <label>צבע רקע</label>
+            <input type="color" name="bg_color" value="<%= item.bg_color || '#FFF6E5' %>" style="height:36px;padding:2px;" />
+            <label>צבע טקסט</label>
+            <input type="color" name="text_color" value="<%= item.text_color || '#2C2C2A' %>" style="height:36px;padding:2px;" />
+          </div>
+
+          <div id="linkField-a<%= item.id %>" style="display:<%= (item.paid_tier === 'plus' || item.paid_tier === 'premium') ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+            <label>קישור לחיצה על המודעה (אופציונלי)</label>
+            <div style="display:flex;gap:16px;margin-bottom:8px;font-size:13px;">
+              <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="website" <%= item.link_type !== 'lead' ? 'checked' : '' %> style="width:auto;margin:0;" /> קישור לאתר</label>
+              <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="lead" <%= item.link_type === 'lead' ? 'checked' : '' %> style="width:auto;margin:0;" /> ליד</label>
+            </div>
+            <input type="url" name="link_url" value="<%= item.link_url || '' %>" placeholder="https://" dir="ltr" style="text-align:left;" />
+            <% if (item.link_type === 'lead' && item.lead_token) { %>
+              <div style="font-size:11px;color:#888780;margin-top:-6px;">
+                <%= leadCounts && leadCounts[item.id] || 0 %> לידים -
+                <a href="/admin/items/<%= item.id %>/leads" target="_blank">צפייה בלידים</a>
+              </div>
+            <% } %>
+          </div>
+
+          <% if (item.paid_tier !== 'free' && (item.from_email || item.phone)) { %>
+            <div style="font-size:12px;color:#888780;margin-top:6px;">
+              פרטי המפרסם: <%= item.from_email || '' %><% if (item.phone) { %> · <%= item.phone %><% } %><% if (item.client_name) { %> · <%= item.client_name %><% } %>
+            </div>
+          <% } %>
+
+          <div id="imageField-a<%= item.id %>" style="display:<%= item.paid_tier === 'premium' ? 'block' : 'none' %>;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+            <label>תמונה חדשה (רק אם רוצים להחליף - זמין רק לפרימיום)</label>
+            <input type="file" name="image" accept="image/*,.gif" />
+            <% const imgs = JSON.parse(item.images_json || '[]'); %>
+            <% if (imgs.length) { %>
+              <div style="font-size:11px;color:#888780;margin-top:4px;">יש כרגע תמונה מצורפת - העלאת תמונה חדשה תחליף אותה.</div>
+            <% } %>
+            <label>קישור לחיצה על התמונה (אופציונלי)</label>
+            <input type="url" name="image_link" value="<%= item.image_link || '' %>" placeholder="https://" dir="ltr" style="text-align:left;" />
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="submit">שמור שינויים</button>
+          </div>
+        </form>
+        <form method="POST" action="/admin/items/<%= item.id %>/unapprove" style="display:inline;" onsubmit="return confirm('להסיר את המודעה הזו מהגיליון הבא?');">
+          <button class="btn danger" type="submit">הסר מהגיליון הבא</button>
+        </form>
+      </div>
+    <% } else if (entry.kind === 'topic') { %>
+      <% const item = entry.item; %>
+      <div class="item-box">
+        <div class="item-meta">נושא</div>
+        <form method="POST" action="/admin/items/<%= item.id %>/edit">
+          <input type="text" name="subject" value="<%= item.subject || '' %>" placeholder="כותרת" />
+          <textarea name="body_edited" rows="4"><%= item.body_edited ?? item.body_raw %></textarea>
+          <div class="actions">
+            <button class="btn" type="submit">שמור שינויים</button>
+          </div>
+        </form>
+        <form method="POST" action="/admin/items/<%= item.id %>/unapprove" style="display:inline;" onsubmit="return confirm('להסיר את הנושא הזה מהגיליון הבא?');">
+          <button class="btn danger" type="submit">הסר מהגיליון הבא</button>
+        </form>
+      </div>
+    <% } %>
+  <% }) %>
+
+<%- include('partials/footer') %>

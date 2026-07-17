@@ -1,0 +1,53 @@
+<%
+  const gmailColor = size.nearGmailLimit ? '#c04828' : list.accent_color;
+  const gmailPct = Math.min(100, size.percentOfGmailLimit);
+  const sgColor = size.nearSendgridLimit ? '#c04828' : list.accent_color;
+  const sgPct = Math.min(100, size.percentOfSendgridLimit);
+%>
+<div class="pp-size" style="border-color:<%= gmailColor %>55;">
+  <div class="pp-size-row">
+    <span>משקל קוד ה-HTML: <strong><%= size.htmlKB %>KB</strong></span>
+    <span class="pp-size-limit">מתוך ~<%= size.gmailLimitKB %>KB (גבול חיתוך Gmail)</span>
+  </div>
+  <div class="pp-size-bar-track">
+    <div class="pp-size-bar-fill" style="width:<%= gmailPct %>%;background:<%= gmailColor %>;"></div>
+  </div>
+  <% if (size.nearGmailLimit) { %>
+    <div class="pp-size-warning">קרוב לגבול - Gmail עלול לחתוך את ההודעה (הגבול הזה נוגע רק לטקסט/עיצוב, לא לתמונות). שקול פחות טקסט/מודעות בגיליון הבא.</div>
+  <% } %>
+  <div class="pp-size-sub">
+    זה נמדד בלי משקל התמונות בכלל - Gmail בודק רק את משקל הטקסט/הקוד עצמו, התמונות מצורפות בנפרד.
+    בנייד (במיוחד אפליקציית Gmail ל-iOS) החיתוך יכול לקרות גם בהרבה פחות מ-102KB, אין מספר קבוע לכך.
+  </div>
+
+  <div class="pp-size-row" style="margin-top:10px;">
+    <span>סה"כ ההודעה (כולל תמונות): <strong><%= size.totalKB %>KB</strong></span>
+    <span class="pp-size-limit">מתוך <%= Math.round(size.sendgridLimitKB/1024) %>MB (גבול SendGrid)</span>
+  </div>
+  <div class="pp-size-bar-track">
+    <div class="pp-size-bar-fill" style="width:<%= sgPct %>%;background:<%= sgColor %>;"></div>
+  </div>
+  <% if (size.nearSendgridLimit) { %>
+    <div class="pp-size-warning">קרוב לגבול השליחה של SendGrid - מעבר לזה ההודעה תיכשל בשליחה. שקול פחות/קטנות יותר תמונות.</div>
+  <% } %>
+  <div class="pp-size-sub" style="margin-top:6px;">תמונות מצורפות: <%= size.imagesKB %>KB · <%= size.entriesCount %> פריטים</div>
+</div>
+
+<div class="pp-list" id="pp-list">
+  <% if (outlineItems.length === 0) { %>
+    <div class="pp-empty">אין עדיין פריטים מאושרים לגיליון הבא.</div>
+  <% } %>
+  <% outlineItems.forEach(item => { %>
+    <div class="pp-item" draggable="true" data-id="<%= item.id %>">
+      <span class="pp-drag-handle">⠿</span>
+      <span class="pp-item-icon"><%= item.icon %></span>
+      <span class="pp-item-body">
+        <span class="pp-item-kind" style="color:<%= list.accent_color %>;"><%= item.kindLabel %></span>
+        <span class="pp-item-title"><%= item.title %></span>
+      </span>
+    </div>
+  <% }) %>
+</div>
+<% if (outlineItems.length > 1) { %>
+  <div class="pp-hint">גררו פריט למקום אחר כדי לשנות את סדר הגיליון - כל שילוב אפשרי, כולל ערבוב שאלות ומודעות.</div>
+<% } %>

@@ -1,0 +1,65 @@
+<%- include('partials/header', { pageTitle: 'כתיבת מודעה - ' + list.name, page: 'compose-ad', activeListId: list.id, allLists: allLists }) %>
+
+  <%- include('partials/tabbar', { list, page: 'compose-ad' }) %>
+
+  <div class="card">
+    <p style="color:#888780;font-size:13px;margin-top:0;">
+      כתיבה ישירה כאן מדלגת על תור האישור - המודעה נכנסת ישר כ"מאושרת".
+      שימו לב: לקוחות ששולחים מודעה במייל יכולים כבר לבקש צבע רקע בעצמם
+      (שורה כמו "צבע: כחול") ולצרף תמונה לפרימיום - זה נקלט אוטומטית בתור
+      האישור. כאן, בכתיבה ידנית, בוחרים ידנית: מודגשת = צבע רקע, פרימיום =
+      גם צבע וגם תמונה/הנפשה (GIF) שתוטמע ותידחס אוטומטית.
+    </p>
+    <form method="POST" action="/admin/lists/<%= list.id %>/compose/ad" enctype="multipart/form-data">
+      <label>כותרת (אופציונלי)</label>
+      <input type="text" name="subject" />
+
+      <label>תוכן המודעה</label>
+      <div class="fmt-toolbar">
+        <button type="button" onclick="wrapSelection('body','**')"><b>ב</b></button>
+        <button type="button" onclick="wrapSelection('body','*')"><i>נ</i></button>
+        <button type="button" onclick="wrapSelection('body','__')"><u>ק</u></button>
+      </div>
+      <textarea id="body" name="body" rows="4" required></textarea>
+
+      <label>רמת מודעה</label>
+      <select name="paid_tier" id="tierSelect" onchange="
+        document.getElementById('colorFields').style.display = (this.value === 'plus' || this.value === 'premium') ? 'block' : 'none';
+        document.getElementById('linkField').style.display = (this.value === 'plus' || this.value === 'premium') ? 'block' : 'none';
+        document.getElementById('imageField').style.display = (this.value === 'premium') ? 'block' : 'none';
+      ">
+        <option value="free">חינם (מודעת שורה - בלי עיצוב)</option>
+        <option value="plus">מודגשת (מסגרת בצבע רקע לבחירה)</option>
+        <option value="premium">פרימיום (צבע רקע + תמונה/GIF)</option>
+      </select>
+
+      <div id="colorFields" style="display:none;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+        <label>צבע רקע</label>
+        <input type="color" name="bg_color" value="#FFF6E5" style="height:36px;padding:2px;" />
+
+        <label>צבע טקסט</label>
+        <input type="color" name="text_color" value="#2C2C2A" style="height:36px;padding:2px;" />
+      </div>
+
+      <div id="linkField" style="display:none;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+        <label>קישור לחיצה על המודעה (אופציונלי)</label>
+        <div style="display:flex;gap:16px;margin-bottom:8px;font-size:13px;">
+          <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="website" checked style="width:auto;margin:0;" /> קישור לאתר</label>
+          <label style="display:flex;align-items:center;gap:4px;width:auto;margin:0;"><input type="radio" name="link_type" value="lead" style="width:auto;margin:0;" /> ליד</label>
+        </div>
+        <input type="url" name="link_url" placeholder="https://" dir="ltr" style="text-align:left;" />
+      </div>
+
+      <div id="imageField" style="display:none;border:1px dashed #d3d1c7;border-radius:8px;padding:12px;margin-top:6px;">
+        <label>תמונה או הנפשה (GIF מונפש נתמך - אופציונלי, זמין רק לפרימיום)</label>
+        <input type="file" name="image" accept="image/*,.gif" />
+        <label>קישור לחיצה על התמונה (אופציונלי)</label>
+        <input type="url" name="image_link" placeholder="https://" dir="ltr" style="text-align:left;" />
+      </div>
+
+      <button class="btn" type="submit" style="margin-top:12px;">הוסף לגיליון הבא</button>
+    </form>
+  </div>
+
+<script src="/toolbar.js"></script>
+<%- include('partials/footer') %>

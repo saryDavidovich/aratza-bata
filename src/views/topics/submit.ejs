@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"><title>שליחת נושא - <%= list.name %></title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f6f5f1; direction:rtl; margin:0; }
+  .wrap { max-width:480px; margin:40px auto; background:#fff; border:1px solid #e3e1d8; border-radius:10px; padding:24px; }
+  h1 { font-size:20px; color:#2c2c2a; }
+  input, textarea { width:100%; padding:9px; border:1px solid #d3d1c7; border-radius:6px; margin-bottom:12px; font-family:inherit; box-sizing:border-box; }
+  .btn { background:<%= list.accent_color %>; color:#fff; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>שליחת נושא לרשימת: <%= list.name %></h1>
+
+  <% if (sent) { %>
+    <p style="color:#0f6e56;">התוכן נשלח ויופיע בגיליון הקרוב לאחר אישור.</p>
+  <% } else { %>
+    <% if (error) { %><p style="color:#c04828;"><%= error %></p><% } %>
+    <form method="POST" action="/topics/<%= list.slug %>">
+      <label>המייל שלך</label>
+      <input type="email" name="email" required />
+
+      <label>כותרת (אופציונלי)</label>
+      <input type="text" name="subject" />
+
+      <label>תוכן</label>
+      <div style="display:flex;gap:4px;margin-bottom:4px;">
+        <button type="button" onclick="wrapSelection('body','**')" style="border:1px solid #d3d1c7;background:#fff;border-radius:4px;width:28px;height:26px;cursor:pointer;"><b>ב</b></button>
+        <button type="button" onclick="wrapSelection('body','*')" style="border:1px solid #d3d1c7;background:#fff;border-radius:4px;width:28px;height:26px;cursor:pointer;"><i>נ</i></button>
+        <button type="button" onclick="wrapSelection('body','__')" style="border:1px solid #d3d1c7;background:#fff;border-radius:4px;width:28px;height:26px;cursor:pointer;"><u>ק</u></button>
+      </div>
+      <textarea id="body" name="body" rows="6" required></textarea>
+
+      <button class="btn" type="submit">שליחה</button>
+    </form>
+  <% } %>
+</div>
+<script src="/toolbar.js"></script>
+</body>
+</html>

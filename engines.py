@@ -10,10 +10,22 @@
 """
 import os
 import io
+import re
 import logging
 import requests
 
 log = logging.getLogger(__name__)
+
+
+def _add_line_breaks(text):
+    """מוסיף ירידת שורה אחרי כל סימן סיום משפט (. ! ?), כולל כשאחריו מירכאות סוגרות -
+    דטרמיניסטי לגמרי (regex פשוט), לא תלוי בהחלטת-חשיבה לא-ודאית של המודל.
+    עובד טוב גם עם thinking_budget=0, כי סימני הפיסוק עצמם כבר יוצאים נכון
+    מהמודל גם בלי חשיבה - ראינו את זה בבדיקות."""
+    if not text:
+        return text
+    text = re.sub(r'([.!?]["\'”]?)\s+', r'\1\n', text)
+    return text.strip()
 
 OCR_PROMPT_TEXT = """אתה סורק OCR מכני לכתב יד עברי בלבד (לא דפוס, לא כתב רש"י) - בד"כ תוכן תורני. אינך מבין עברית, רק מעתיק צורות אותיות כמו מצלמה.
 
@@ -47,6 +59,14 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language, thinking_budget=0)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_no_thinking_postprocessed':
+            # הפתרון המומלץ: thinking_budget=0 קבוע (אפס עלות חשיבה, לא תלוי
+            # בהחלטה לא-ודאית של המודל) + ירידות שורה שמתווספות בקוד שלנו
+            # (regex דטרמיניסטי על סימני פיסוק), במקום להסתמך על "חשיבה" בשביל זה.
+            public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
+            text = _gemini_transcribe(public_url, language, thinking_budget=0)
+            text = _add_line_breaks(text)
+            _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini_low_cost_formatted':
             # thinking_budget=0 לגמרי (אפס טוקני חשיבה, אפס עלות חשיבה) -
             # הפורמט (ירידות שורה/פיסוק) מגיע רק מהוראה בפרומפט, לא מחשיבה.
@@ -56,10 +76,16 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
             _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini_min_thinking_formatted':
             # budget מינימלי (128, לעומת 512 בגרסה הממוקדת ו-0 בגרסת החיסכון המלא) -
-            # בודק אם כמות קטנה מאוד של חשיבה מספיקה כדי "לשמר" את הפורמט,
-            # בעלות נמוכה משמעותית מהגרסה עם 512.
+            # בבדיקה: ב-128 גמיני בחר להשתמש ב-0 טוקני חשיבה בפועל (זו תקרה, לא הבטחה) -
+            # והפורמט לא הופיע. ראה gemini_mid_thinking_formatted לערך ביניים.
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe_formatted_no_thinking(public_url, language, thinking_budget=128)
+            _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_mid_thinking_formatted':
+            # המשך חיפוש בינארי: 128 לא הספיק (0 טוקני חשיבה בפועל, אין פורמט),
+            # 512 הספיק (פורמט תקין) - בודקים את האמצע, 256, כדי לצמצם את הטווח.
+            public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
+            text = _gemini_transcribe_formatted_no_thinking(public_url, language, thinking_budget=256)
             _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini_focused_thinking':
             # חשיבה מוגבלת (budget קטן) שמכוונת בפרומפט רק לירידות שורה/פיסוק,

@@ -47,6 +47,13 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language, thinking_budget=0)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_low_cost_formatted':
+            # thinking_budget=0 לגמרי (אפס טוקני חשיבה, אפס עלות חשיבה) -
+            # הפורמט (ירידות שורה/פיסוק) מגיע רק מהוראה בפרומפט, לא מחשיבה.
+            # המטרה: לבדוק אם אפשר לקבל את אותה איכות פורמט בלי לשלם על חשיבה בכלל.
+            public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
+            text = _gemini_transcribe_formatted_no_thinking(public_url, language)
+            _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini_focused_thinking':
             # חשיבה מוגבלת (budget קטן) שמכוונת בפרומפט רק לירידות שורה/פיסוק,
             # לא לתיקון מילים - וכוללת את סיכום החשיבה עצמו במייל, לצורך בדיקה.
@@ -286,6 +293,65 @@ def _gemini_transcribe(url, language='he', thinking_budget=None):
             return (response.text or '').strip()
         except Exception as e:
             log.warning(f"Gemini transcribe attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                import time; time.sleep(8)
+    return None
+
+
+def _gemini_transcribe_formatted_no_thinking(url, language='he'):
+    """נסיוני לחיסכון: thinking_budget=0 (אפס טוקני חשיבה, אפס עלות חשיבה) -
+    הפורמט (ירידת שורה בסוף כל משפט/פסוקית, פיסוק) מבוקש כהוראת ציות ישירה
+    בפרומפט, לא כתוצר לוואי של חשיבה. המטרה: לבדוק אם אפשר "לזייף" את אפקט
+    הפורמט הנחמד שראינו בגרסת החשיבה הממוקדת, בלי לשלם טוקן חשיבה אחד."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    api_key = os.environ.get('GOOGLE_API_KEY')
+    client = genai.Client(api_key=api_key)
+
+    r = requests.get(url, timeout=300)
+    r.raise_for_status()
+    audio_content = r.content
+
+    url_lower = url.lower().split('?')[0]
+    is_video = any(url_lower.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.mkv', '.3gp', '.m4v', '.webm'))
+    mime_type = 'video/mp4' if is_video else 'audio/wav'
+
+    input_lang_map = {'he': 'עברית', 'yi': 'יידיש', 'en': 'English', 'ar': 'ארמית'}
+    input_lang_name = input_lang_map.get(language, 'עברית')
+
+    prompt = f"""תמלל את קובץ השמע/וידאו הזה במדויק.
+שפת הדובר: {input_lang_name}.
+כתוב את התמלול בעברית, אלא אם הדובר מדבר אנגלית - אז כתוב באנגלית.
+חשוב ביותר - תמלול מדויק ומלא:
+- תמלל כל מילה ומילה ללא יוצא מן הכלל, בדיוק כפי שנשמעת - אל תתקן, תשלים או "תנקה" ניסוח, גמגום או מילים חוזרות.
+- אל תדלג על אף מילה, אפילו אם הקול לא ברור - כתוב את מה שנשמע גם אם אינך בטוח.
+- אל תסכם, אל תקצר, אל תדלג על חלקים.
+- שמור על מינוח תורני נכון, ארמית, ראשי תיבות וגרסאות.
+
+פורמט (הוראת עיצוב פשוטה, לא דורשת ניתוח):
+- רד שורה בסוף כל משפט או פסוקית שלמה, כדי שהטקסט יהיה קריא וברור לעין.
+- הוסף פיסוק (פסיקים, נקודות, מירכאות) לפי מבנה המשפט הנשמע.
+
+החזר רק את הטקסט המתומלל ללא הערות נוספות."""
+
+    config = gtypes.GenerateContentConfig(
+        thinking_config=gtypes.ThinkingConfig(thinking_budget=0)
+    )
+
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=[
+                    gtypes.Part.from_bytes(data=audio_content, mime_type=mime_type),
+                    prompt,
+                ],
+                config=config,
+            )
+            return (response.text or '').strip()
+        except Exception as e:
+            log.warning(f"Gemini low-cost-formatted transcribe attempt {attempt + 1} failed: {e}")
             if attempt < 2:
                 import time; time.sleep(8)
     return None

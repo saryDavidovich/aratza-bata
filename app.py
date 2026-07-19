@@ -62,6 +62,8 @@ button:hover{background:#1d4ed8}
     <option value="auto">אוטומטי (לפי סוג הקובץ)</option>
     <option value="gemini">תמלול - Gemini (מנוע רגיל)</option>
     <option value="gemini_no_thinking">תמלול - Gemini בלי חשיבה (thinking_budget=0)</option>
+    <option value="gemini_focused_thinking">🧪 תמלול - Gemini חשיבה ממוקדת (רק פיסוק/ירידות שורה, עם הצגת החשיבה)</option>
+    <option value="gemini_default_thinking_debug">🧪 תמלול - Gemini כרגיל (אותו פרומפט/חשיבה כמו קודם, עם הצגת החשיבה)</option>
     <option value="alefbot">תמלול - AlefBot (מנוע פרימיום)</option>
     <option value="gemini_ocr">קלדן כתב יד - Gemini</option>
     <option value="claude_ocr">קלדן כתב יד - Claude</option>

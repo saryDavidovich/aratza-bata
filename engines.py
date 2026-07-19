@@ -175,7 +175,7 @@ def _gemini_ocr(filepath, original_filename):
         for attempt in range(3):
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-pro',
+                    model='gemini-3.5-flash',
                     contents=[
                         gtypes.Part.from_bytes(data=img_bytes, mime_type=mime),
                         OCR_PROMPT_TEXT,
@@ -250,7 +250,7 @@ def _gemini_transcribe(url, language='he', thinking_budget=None):
     for attempt in range(3):
         try:
             kwargs = dict(
-                model='gemini-2.5-pro',
+                model='gemini-3.5-flash',
                 contents=[
                     gtypes.Part.from_bytes(data=audio_content, mime_type=mime_type),
                     prompt,

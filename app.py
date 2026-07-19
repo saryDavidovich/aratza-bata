@@ -62,8 +62,10 @@ button:hover{background:#1d4ed8}
     <option value="auto">אוטומטי (לפי סוג הקובץ)</option>
     <option value="gemini">תמלול - Gemini (מנוע רגיל)</option>
     <option value="gemini_no_thinking">תמלול - Gemini בלי חשיבה (thinking_budget=0)</option>
+    <option value="gemini_no_thinking_postprocessed">✅ תמלול - Gemini בלי חשיבה + ירידות שורה בקוד (מומלץ - זול ואמין)</option>
     <option value="gemini_low_cost_formatted">🧪 תמלול - Gemini חיסכון (אפס חשיבה + הוראת פורמט בפרומפט)</option>
     <option value="gemini_min_thinking_formatted">🧪 תמלול - Gemini חיסכון חלקי (budget=128 + הוראת פורמט)</option>
+    <option value="gemini_mid_thinking_formatted">🧪 תמלול - Gemini חיסכון חלקי (budget=256 + הוראת פורמט)</option>
     <option value="gemini_focused_thinking">🧪 תמלול - Gemini חשיבה ממוקדת (רק פיסוק/ירידות שורה, עם הצגת החשיבה)</option>
     <option value="gemini_default_thinking_debug">🧪 תמלול - Gemini כרגיל (אותו פרומפט/חשיבה כמו קודם, עם הצגת החשיבה)</option>
     <option value="alefbot">תמלול - AlefBot (מנוע פרימיום)</option>

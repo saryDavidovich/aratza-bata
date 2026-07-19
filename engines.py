@@ -47,6 +47,24 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language, thinking_budget=0)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_focused_thinking':
+            # חשיבה מוגבלת (budget קטן) שמכוונת בפרומפט רק לירידות שורה/פיסוק,
+            # לא לתיקון מילים - וכוללת את סיכום החשיבה עצמו במייל, לצורך בדיקה.
+            public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
+            text, thoughts = _gemini_transcribe_focused(public_url, language)
+            body = text or ''
+            if thoughts:
+                body += f"\n\n---\n🧠 סיכום החשיבה (thought summary):\n{thoughts}"
+            _send_result_email(result_email, original_filename, engine, body)
+        elif engine == 'gemini_default_thinking_debug':
+            # בדיוק כמו מנוע 'gemini' הרגיל (אותו פרומפט, אותה חשיבה) - ההבדל היחיד:
+            # חושף את סיכום החשיבה במייל, כדי להשוות מול gemini_focused_thinking.
+            public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
+            text, thoughts = _gemini_transcribe_default_with_thoughts(public_url, language)
+            body = text or ''
+            if thoughts:
+                body += f"\n\n---\n🧠 סיכום החשיבה (thought summary):\n{thoughts}"
+            _send_result_email(result_email, original_filename, engine, body)
         elif engine == 'alefbot':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             _alefbot_run(public_url, original_filename, language, result_email)
@@ -271,6 +289,139 @@ def _gemini_transcribe(url, language='he', thinking_budget=None):
             if attempt < 2:
                 import time; time.sleep(8)
     return None
+
+
+def _gemini_transcribe_default_with_thoughts(url, language='he'):
+    """זהה לחלוטין למנוע 'gemini' הרגיל (אותו פרומפט, אותה חשיבה דינמית/ברירת מחדל) -
+    ההבדל היחיד: include_thoughts=True, כדי לחשוף את סיכום החשיבה להשוואה מול
+    _gemini_transcribe_focused. לא נועד לשימוש קבוע - רק להשוואה בבדיקה."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    api_key = os.environ.get('GOOGLE_API_KEY')
+    client = genai.Client(api_key=api_key)
+
+    r = requests.get(url, timeout=300)
+    r.raise_for_status()
+    audio_content = r.content
+
+    url_lower = url.lower().split('?')[0]
+    is_video = any(url_lower.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.mkv', '.3gp', '.m4v', '.webm'))
+    mime_type = 'video/mp4' if is_video else 'audio/wav'
+
+    input_lang_map = {'he': 'עברית', 'yi': 'יידיש', 'en': 'English', 'ar': 'ארמית'}
+    input_lang_name = input_lang_map.get(language, 'עברית')
+
+    # אותו פרומפט בדיוק כמו ב-_gemini_transcribe (המנוע הרגיל) - בלי שום שינוי.
+    prompt = f"""תמלל את קובץ השמע/וידאו הזה במדויק.
+שפת הדובר: {input_lang_name}.
+כתוב את התמלול בעברית, אלא אם הדובר מדבר אנגלית - אז כתוב באנגלית.
+חשוב ביותר - תמלול מדויק ומלא:
+- תמלל כל מילה ומילה ללא יוצא מן הכלל.
+- אל תדלג על אף מילה, אפילו אם הקול לא ברור - כתוב את מה שנשמע גם אם אינך בטוח.
+- אל תסכם, אל תקצר, אל תדלג על חלקים.
+- שמור על מינוח תורני נכון, ארמית, ראשי תיבות וגרסאות.
+- החזר רק את הטקסט המתומלל ללא הערות נוספות."""
+
+    # thinking_budget לא מוגדר בכלל (כמו במנוע הרגיל) - רק include_thoughts=True נוסף,
+    # כדי לקבל חשיבה דינמית/ברירת מחדל בדיוק כמו קודם, ובנוסף לראות אותה.
+    config = gtypes.GenerateContentConfig(
+        thinking_config=gtypes.ThinkingConfig(include_thoughts=True)
+    )
+
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=[
+                    gtypes.Part.from_bytes(data=audio_content, mime_type=mime_type),
+                    prompt,
+                ],
+                config=config,
+            )
+            text_parts = []
+            thought_parts = []
+            for part in response.candidates[0].content.parts:
+                if not getattr(part, 'text', None):
+                    continue
+                if getattr(part, 'thought', False):
+                    thought_parts.append(part.text)
+                else:
+                    text_parts.append(part.text)
+            return ('\n'.join(text_parts).strip() or None), ('\n'.join(thought_parts).strip() or None)
+        except Exception as e:
+            log.warning(f"Gemini default-with-thoughts transcribe attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                import time; time.sleep(8)
+    return None, None
+
+
+def _gemini_transcribe_focused(url, language='he'):
+    """נסיוני: budget חשיבה קטן ומכוון (לא כבוי לגמרי, לא חופשי) + הנחיה מפורשת
+    בפרומפט לאן להפנות את החשיבה - רק החלטות על ירידת שורה/פיסוק, לא תיקון תוכן.
+    מחזיר גם את סיכום החשיבה (include_thoughts=True) כדי לבדוק בפועל על מה הוא חושב."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    api_key = os.environ.get('GOOGLE_API_KEY')
+    client = genai.Client(api_key=api_key)
+
+    r = requests.get(url, timeout=300)
+    r.raise_for_status()
+    audio_content = r.content
+
+    url_lower = url.lower().split('?')[0]
+    is_video = any(url_lower.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.mkv', '.3gp', '.m4v', '.webm'))
+    mime_type = 'video/mp4' if is_video else 'audio/wav'
+
+    input_lang_map = {'he': 'עברית', 'yi': 'יידיש', 'en': 'English', 'ar': 'ארמית'}
+    input_lang_name = input_lang_map.get(language, 'עברית')
+
+    prompt = f"""תמלל את קובץ השמע/וידאו הזה במדויק.
+שפת הדובר: {input_lang_name}.
+כתוב את התמלול בעברית, אלא אם הדובר מדבר אנגלית - אז כתוב באנגלית.
+חשוב ביותר - תמלול מדויק ומלא:
+- תמלל כל מילה ומילה ללא יוצא מן הכלל, בדיוק כפי שנשמעת - אל תתקן, תשלים או "תנקה" ניסוח, גמגום או מילים חוזרות.
+- אל תדלג על אף מילה, אפילו אם הקול לא ברור - כתוב את מה שנשמע גם אם אינך בטוח.
+- אל תסכם, אל תקצר, אל תדלג על חלקים.
+- שמור על מינוח תורני נכון, ארמית, ראשי תיבות וגרסאות.
+
+השתמש בחשיבה שלך אך ורק כדי להחליט:
+1. היכן לשים ירידת שורה (סוף משפט/מעבר נושא), כדי שהטקסט יהיה קריא.
+2. פיסוק (פסיקים, נקודות, מירכאות) לפי תחביר המשפט הנשמע.
+אל תשתמש בחשיבה כדי לשנות, לתקן או "לשפר" מילה כלשהי מעבר למה שנשמע בפועל.
+
+החזר רק את הטקסט המתומלל ללא הערות נוספות."""
+
+    config = gtypes.GenerateContentConfig(
+        thinking_config=gtypes.ThinkingConfig(thinking_budget=512, include_thoughts=True)
+    )
+
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=[
+                    gtypes.Part.from_bytes(data=audio_content, mime_type=mime_type),
+                    prompt,
+                ],
+                config=config,
+            )
+            text_parts = []
+            thought_parts = []
+            for part in response.candidates[0].content.parts:
+                if not getattr(part, 'text', None):
+                    continue
+                if getattr(part, 'thought', False):
+                    thought_parts.append(part.text)
+                else:
+                    text_parts.append(part.text)
+            return ('\n'.join(text_parts).strip() or None), ('\n'.join(thought_parts).strip() or None)
+        except Exception as e:
+            log.warning(f"Gemini focused-thinking transcribe attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                import time; time.sleep(8)
+    return None, None
 
 
 def _alefbot_run(rec_url, original_filename, language, result_email):

@@ -50,9 +50,16 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         elif engine == 'gemini_low_cost_formatted':
             # thinking_budget=0 לגמרי (אפס טוקני חשיבה, אפס עלות חשיבה) -
             # הפורמט (ירידות שורה/פיסוק) מגיע רק מהוראה בפרומפט, לא מחשיבה.
-            # המטרה: לבדוק אם אפשר לקבל את אותה איכות פורמט בלי לשלם על חשיבה בכלל.
+            # הערה: בבדיקה נמצא שב-budget=0 גם הפורמט נעלם - ראה gemini_min_thinking_formatted.
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
-            text = _gemini_transcribe_formatted_no_thinking(public_url, language)
+            text = _gemini_transcribe_formatted_no_thinking(public_url, language, thinking_budget=0)
+            _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_min_thinking_formatted':
+            # budget מינימלי (128, לעומת 512 בגרסה הממוקדת ו-0 בגרסת החיסכון המלא) -
+            # בודק אם כמות קטנה מאוד של חשיבה מספיקה כדי "לשמר" את הפורמט,
+            # בעלות נמוכה משמעותית מהגרסה עם 512.
+            public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
+            text = _gemini_transcribe_formatted_no_thinking(public_url, language, thinking_budget=128)
             _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini_focused_thinking':
             # חשיבה מוגבלת (budget קטן) שמכוונת בפרומפט רק לירידות שורה/פיסוק,
@@ -298,11 +305,12 @@ def _gemini_transcribe(url, language='he', thinking_budget=None):
     return None
 
 
-def _gemini_transcribe_formatted_no_thinking(url, language='he'):
-    """נסיוני לחיסכון: thinking_budget=0 (אפס טוקני חשיבה, אפס עלות חשיבה) -
+def _gemini_transcribe_formatted_no_thinking(url, language='he', thinking_budget=0):
+    """נסיוני לחיסכון: thinking_budget קטן/אפס (כמעט או לגמרי בלי טוקני חשיבה) -
     הפורמט (ירידת שורה בסוף כל משפט/פסוקית, פיסוק) מבוקש כהוראת ציות ישירה
-    בפרומפט, לא כתוצר לוואי של חשיבה. המטרה: לבדוק אם אפשר "לזייף" את אפקט
-    הפורמט הנחמד שראינו בגרסת החשיבה הממוקדת, בלי לשלם טוקן חשיבה אחד."""
+    בפרומפט. גילינו ש-budget=0 מבטל גם את הפורמט (אין תכנון מבנה בלי חשיבה
+    בכלל) - לכן פרמטר זה מאפשר לבדוק ערכים קטנים אחרים (למשל 128) כדי למצוא
+    את המינימום שעדיין "שומר" על הפורמט, בלי לשלם על חשיבה כמו בגרסה הרגילה."""
     from google import genai
     from google.genai import types as gtypes
 
@@ -336,7 +344,7 @@ def _gemini_transcribe_formatted_no_thinking(url, language='he'):
 החזר רק את הטקסט המתומלל ללא הערות נוספות."""
 
     config = gtypes.GenerateContentConfig(
-        thinking_config=gtypes.ThinkingConfig(thinking_budget=0)
+        thinking_config=gtypes.ThinkingConfig(thinking_budget=thinking_budget)
     )
 
     for attempt in range(3):

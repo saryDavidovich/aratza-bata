@@ -17,15 +17,48 @@ import requests
 log = logging.getLogger(__name__)
 
 
-def _add_line_breaks(text):
-    """מוסיף ירידת שורה אחרי כל סימן סיום משפט (. ! ?), כולל כשאחריו מירכאות סוגרות -
-    דטרמיניסטי לגמרי (regex פשוט), לא תלוי בהחלטת-חשיבה לא-ודאית של המודל.
-    עובד טוב גם עם thinking_budget=0, כי סימני הפיסוק עצמם כבר יוצאים נכון
-    מהמודל גם בלי חשיבה - ראינו את זה בבדיקות."""
+def _remove_single_letter_stutters(text):
+    """מוחק 'מילים' שהן אות עברית בודדת ומבודדת (עם או בלי נקודה/פסיק/שלוש-נקודות
+    אחריה) - כמעט תמיד שארית של גמגום/התחלה כפולה (למשל 'אומר ב בתחילת' ->
+    'אומר בתחילת'). לא נוגע באות בודדת שאחריה גרש/אפוסטרוף (' או ׳) - כי אז
+    האורך אחרי הסרת פיסוק הוא 2 תווים, לא 1, וזה מגן אוטומטית על 'ה' (שם ה')
+    ועל מספור באותיות ('א', 'ב', 'ג' וכו') שנפוצים מאוד בתוכן הלכתי."""
     if not text:
         return text
-    text = re.sub(r'([.!?]["\'”]?)\s+', r'\1\n', text)
-    return text.strip()
+    HEBREW_LETTERS = set('אבגדהוזחטיכלמנסעפצקרשתךםןףץ')
+    tokens = text.split(' ')
+    cleaned = []
+    for tok in tokens:
+        core = tok
+        if core.endswith('...'):
+            core = core[:-3]
+        core = core.rstrip('.,')
+        if len(core) == 1 and core in HEBREW_LETTERS:
+            continue  # אות בודדת בלי גרש - גמגום, מוחקים את כל האסימון
+        cleaned.append(tok)
+    # ניקוי רווחים כפולים שנוצרו מהמחיקה
+    return re.sub(r' {2,}', ' ', ' '.join(cleaned)).strip()
+
+
+def _add_line_breaks(text, min_chars=80):
+    """מפצל לשורות קריאות: מצרף משפטים רצופים (שמסתיימים ב. ! ?) לשורה אחת
+    עד שמגיעים למינימום תווים (min_chars), ואז יורד שורה - כדי למנוע שורות
+    קצרות מדי בודדות (כמו "נכון." או "כן?" בשורה נפרדת משלהן) שמרגישות
+    מקוטעות. דטרמיניסטי לגמרי, עובד גם עם thinking_budget=0."""
+    if not text:
+        return text
+    marked = re.sub(r'([.!?]["\'”]?)\s+', r'\1\n', text.strip())
+    sentences = [s.strip() for s in marked.split('\n') if s.strip()]
+    lines = []
+    current = ''
+    for s in sentences:
+        current = f'{current} {s}'.strip() if current else s
+        if len(current) >= min_chars:
+            lines.append(current)
+            current = ''
+    if current:
+        lines.append(current)
+    return '\n'.join(lines)
 
 OCR_PROMPT_TEXT = """אתה סורק OCR מכני לכתב יד עברי בלבד (לא דפוס, לא כתב רש"י) - בד"כ תוכן תורני. אינך מבין עברית, רק מעתיק צורות אותיות כמו מצלמה.
 
@@ -61,10 +94,11 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
             _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini_no_thinking_postprocessed':
             # הפתרון המומלץ: thinking_budget=0 קבוע (אפס עלות חשיבה, לא תלוי
-            # בהחלטה לא-ודאית של המודל) + ירידות שורה שמתווספות בקוד שלנו
-            # (regex דטרמיניסטי על סימני פיסוק), במקום להסתמך על "חשיבה" בשביל זה.
+            # בהחלטה לא-ודאית של המודל) + ניקוי אותיות-בודדות (גמגום) + ירידות
+            # שורה - שני השלבים דטרמיניסטיים בקוד שלנו, לא "חשיבה" של המודל.
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language, thinking_budget=0)
+            text = _remove_single_letter_stutters(text)
             text = _add_line_breaks(text)
             _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini_low_cost_formatted':

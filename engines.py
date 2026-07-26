@@ -87,6 +87,9 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         elif engine == 'gemini_ocr_10x_vote':
             text = _gemini_ocr_10x_vote(filepath, original_filename)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_5x_gpt4o_vote':
+            text = _gemini_5x_gpt4o_vote(filepath, original_filename)
+            _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language)
@@ -355,6 +358,136 @@ def _gemini_ocr_10x_vote(filepath, original_filename):
     with open(filepath, 'rb') as f:
         img_bytes = f.read()
     return process_page(img_bytes, mime)
+
+
+def _gemini_5x_gpt4o_vote(filepath, original_filename):
+    """ניסוי גרסה 3: שלב א' - Gemini מפיק 5 השערות לכל שורה, thinking_budget=0.
+    שלב ב' - GPT-4o מקבל את התמונה + רשימת המועמדים, ומכריע לפי התאמה חזותית
+    לתמונה (לא לפי מה ש"מסתדר" לו תוכנית/דקדוקית) - אבל חייב לבחור מילה-במילה
+    מתוך מה שגימיני כתב, לא להמציא ולא לנסח מחדש. גרסה 1 (Claude+תמונה, בלי
+    הגבלה לבחור-רק-מהרשימה) המציאה מילים. גרסה 2 (GPT-4o, בלי תמונה כלל) לא
+    יכולה בכלל לשפוט קרבה למקור כי אין לה מקור להשוות אליו. זו הגרסה שמאזנת
+    בין השתיים: יש תמונה לצורך השוואה חזותית, אבל אין חופש להמציא.
+    המייל כולל את שני השלבים בנפרד לצורך ביקורת."""
+    from google import genai
+    from google.genai import types as gtypes
+    from openai import OpenAI
+    import base64
+    import json as _json
+
+    gemini_key = os.environ.get('GOOGLE_API_KEY_OCR') or os.environ.get('GOOGLE_API_KEY')
+    gemini_client = genai.Client(api_key=gemini_key)
+    openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+    CANDIDATES_PROMPT = OCR_PROMPT_TEXT + """
+
+חלק את הכתב לשורות בדיוק כפי שהן מסודרות בתמונה. עבור כל שורה, ספק 5 השערות
+שונות וסבירות לגבי הכיתוב - גם אם חלקן קרובות זו לזו (הבדל של אות אחת וכו'),
+זה בסדר גמור, המטרה לכסות את טווח האפשרויות הסביר ולא להמציא 5 זהות.
+החזר אך ורק JSON תקין (בלי שום טקסט לפני/אחרי, בלי ```), בפורמט הבא:
+[{"line": 1, "candidates": ["אפשרות 1", "אפשרות 2", ..., "אפשרות 5"]}, ...]"""
+
+    JUDGE_PROMPT = """קיבלת תמונה של כתב יד עברי, ורשימת מועמדים לכל שורה שהופקו
+ע"י מודל OCR אחר (Gemini). תפקידך: להשוות כל מועמד מול הכיתוב בפועל בתמונה,
+ולבחור לכל שורה את המועמד שהכי תואם חזותית לאותיות שכתובות שם - לא את המועמד
+שהכי "מסתדר" לך מבחינת תוכן, דקדוק או הקשר. אם מועמד נראה לך משונה או לא
+הגיוני מבחינה תוכנית, אבל הוא הכי קרוב לצורת האותיות בפועל בתמונה - תבחר בו,
+ולא במועמד ה"יפה" יותר שלא תואם את מה שבאמת כתוב.
+
+חשוב מאוד: אתה מבצע אימות חזותי מול הרשימה, לא תמלול חופשי משלך. אסור לך
+להמציא מילים שלא מופיעות ברשימת המועמדים, אסור לנסח מחדש, אסור לשלב חלקים
+ממועמדים שונים לתוך משפט חדש - גם אם נראה לך שאתה "רואה" בתמונה משהו אחר
+לגמרי. תמיד תבחר מועמד קיים מהרשימה, מילה במילה בדיוק כפי שהוא מופיע. אם כל
+המועמדים באותה שורה נראים גרועים במידה שווה - עדיין תבחר את הפחות גרוע
+מביניהם, בלי לשנות אף מילה בו. החזר את הטקסט הסופי בלבד, שורה אחר שורה,
+בלי מספור ובלי הסברים.
+
+רשימת המועמדים (JSON):
+"""
+
+    def get_candidates(img_bytes, mime):
+        for attempt in range(3):
+            try:
+                response = gemini_client.models.generate_content(
+                    model='gemini-3.5-flash',
+                    contents=[gtypes.Part.from_bytes(data=img_bytes, mime_type=mime), CANDIDATES_PROMPT],
+                    config=gtypes.GenerateContentConfig(
+                        response_mime_type='application/json',
+                        thinking_config=gtypes.ThinkingConfig(thinking_budget=0),
+                    ),
+                )
+                raw = (response.text or '').strip()
+                return _json.loads(raw)
+            except Exception as e:
+                log.warning(f"5x-vote candidates attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    import time; time.sleep(8)
+        return None
+
+    def judge(img_bytes, mime, candidates_json):
+        img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+        candidates_text = _json.dumps(candidates_json, ensure_ascii=False, indent=1)
+        for attempt in range(3):
+            try:
+                response = openai_client.chat.completions.create(
+                    model='gpt-4o',
+                    max_tokens=4096,
+                    messages=[{
+                        'role': 'user',
+                        'content': [
+                            {'type': 'text', 'text': JUDGE_PROMPT + candidates_text},
+                            {'type': 'image_url', 'image_url': {'url': f'data:{mime};base64,{img_b64}', 'detail': 'high'}}
+                        ]
+                    }]
+                )
+                return response.choices[0].message.content.strip()
+            except Exception as e:
+                log.warning(f"5x-vote judge attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    import time; time.sleep(8)
+        return None
+
+    def process_page(img_bytes, mime):
+        candidates_json = get_candidates(img_bytes, mime)
+        if not candidates_json:
+            return None, '[שלב 1 (Gemini) נכשל - לא הופקו מועמדים]'
+        candidates_str = _json.dumps(candidates_json, ensure_ascii=False, indent=1)
+        final_text = judge(img_bytes, mime, candidates_json)
+        if not final_text:
+            final_text = '[שלב 2 (GPT-4o) נכשל להכריע]'
+        return candidates_str, final_text
+
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+    pages_candidates = []
+    pages_final = []
+
+    if ext == 'pdf':
+        import fitz
+        doc = fitz.open(filepath)
+        for i in range(len(doc)):
+            pix = doc[i].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+            img_bytes = pix.tobytes('png')
+            cand, final = process_page(img_bytes, 'image/png')
+            pages_candidates.append(f"--- עמוד {i + 1} ---\n{cand}")
+            pages_final.append(f"--- עמוד {i + 1} ---\n{final}")
+        doc.close()
+    else:
+        mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp'}
+        mime = mime_map.get(ext, 'image/jpeg')
+        with open(filepath, 'rb') as f:
+            img_bytes = f.read()
+        cand, final = process_page(img_bytes, mime)
+        pages_candidates.append(cand)
+        pages_final.append(final)
+
+    body = (
+        "✅ תוצאה סופית (GPT-4o בחר מתוך המועמדים של Gemini):\n"
+        + '\n\n'.join(pages_final)
+        + "\n\n" + "=" * 40 + "\n\n"
+        + "🔤 המועמדים הגולמיים מ-Gemini (5 לשורה, אפס חשיבה):\n"
+        + '\n\n'.join(pages_candidates)
+    )
+    return body
 
 
 def _gemini_ocr(filepath, original_filename):

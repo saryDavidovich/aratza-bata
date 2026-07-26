@@ -72,6 +72,7 @@ button:hover{background:#1d4ed8}
     <option value="gemini_ocr">קלדן כתב יד - Gemini</option>
     <option value="claude_ocr">קלדן כתב יד - Claude</option>
     <option value="gpt4o_ocr">קלדן כתב יד - GPT-4o</option>
+    <option value="gemini_ocr_10x_vote">🧪 קלדן כתב יד - Gemini (10 הצעות לשורה) + Claude מכריע</option>
   </select>
 
   <label>שפה (רלוונטי לתמלול אודיו/וידאו בלבד)</label>

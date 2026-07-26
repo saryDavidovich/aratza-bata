@@ -84,6 +84,9 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         elif engine == 'gpt4o_ocr':
             text = _gpt4o_ocr(filepath, original_filename)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_ocr_10x_vote':
+            text = _gemini_ocr_10x_vote(filepath, original_filename)
+            _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language)
@@ -252,6 +255,106 @@ def _gpt4o_ocr(filepath, original_filename):
     with open(filepath, 'rb') as f:
         img_bytes = f.read()
     return ocr_image_bytes(img_bytes, mime)
+
+
+def _gemini_ocr_10x_vote(filepath, original_filename):
+    """ניסוי: שלב א' - Gemini מפיק 10 השערות שונות לכל שורה בכתב היד (JSON מובנה).
+    שלב ב' - Claude (מודל אחר לגמרי) מקבל את התמונה + רשימת המועמדים, ומכריע
+    לכל שורה מה הנכון (או מתקן בעצמו אם אף מועמד לא מדויק). נותן ל-Claude גם
+    את התמונה עצמה (לא רק את הטקסטים) כדי שההכרעה תהיה מבוססת ראייה, לא ניחוש עיוור."""
+    from google import genai
+    from google.genai import types as gtypes
+    import anthropic
+    import base64
+    import json as _json
+
+    gemini_key = os.environ.get('GOOGLE_API_KEY_OCR') or os.environ.get('GOOGLE_API_KEY')
+    gemini_client = genai.Client(api_key=gemini_key)
+    claude_client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+
+    CANDIDATES_PROMPT = OCR_PROMPT_TEXT + """
+
+חלק את הכתב לשורות בדיוק כפי שהן מסודרות בתמונה. עבור כל שורה, ספק 10 השערות
+שונות וסבירות לגבי הכיתוב - גם אם חלקן קרובות זו לזו (הבדל של אות אחת וכו'),
+זה בסדר גמור, המטרה לכסות את טווח האפשרויות הסביר ולא להמציא 10 זהות.
+החזר אך ורק JSON תקין (בלי שום טקסט לפני/אחרי, בלי ```), בפורמט הבא:
+[{"line": 1, "candidates": ["אפשרות 1", "אפשרות 2", ..., "אפשרות 10"]}, ...]"""
+
+    JUDGE_PROMPT = """אתה מקבל תמונה של כתב יד עברי (בד"כ תוכן תורני), ורשימת
+מועמדים לכל שורה שהופקו ע"י מודל OCR אחר (Gemini). תפקידך: להסתכל בעצמך
+בתמונה, ולבחור לכל שורה את המועמד המדויק ביותר מהרשימה - או לתקן בעצמך אם
+אתה בטוח שאף מועמד לא מדויק. החזר את הטקסט הסופי המלא בלבד, שורה אחר שורה,
+בלי מספור שורות ובלי הסברים נוספים.
+
+רשימת המועמדים (JSON):
+"""
+
+    def get_candidates(img_bytes, mime):
+        for attempt in range(3):
+            try:
+                response = gemini_client.models.generate_content(
+                    model='gemini-3.5-flash',
+                    contents=[gtypes.Part.from_bytes(data=img_bytes, mime_type=mime), CANDIDATES_PROMPT],
+                    config=gtypes.GenerateContentConfig(response_mime_type='application/json'),
+                )
+                raw = (response.text or '').strip()
+                return _json.loads(raw)
+            except Exception as e:
+                log.warning(f"10x-vote candidates attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    import time; time.sleep(8)
+        return None
+
+    def judge(img_bytes, mime, candidates_json):
+        img_b64 = base64.standard_b64encode(img_bytes).decode('utf-8')
+        candidates_text = _json.dumps(candidates_json, ensure_ascii=False, indent=1)
+        for attempt in range(3):
+            try:
+                response = claude_client.messages.create(
+                    model='claude-opus-4-5',
+                    max_tokens=4096,
+                    messages=[{
+                        'role': 'user',
+                        'content': [
+                            {'type': 'image', 'source': {'type': 'base64', 'media_type': mime, 'data': img_b64}},
+                            {'type': 'text', 'text': JUDGE_PROMPT + candidates_text}
+                        ]
+                    }]
+                )
+                return response.content[0].text.strip()
+            except Exception as e:
+                log.warning(f"10x-vote judge attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    import time; time.sleep(8)
+        return None
+
+    def process_page(img_bytes, mime):
+        candidates_json = get_candidates(img_bytes, mime)
+        if not candidates_json:
+            return '[שלב 1 (Gemini) נכשל - לא הופקו מועמדים]'
+        final_text = judge(img_bytes, mime, candidates_json)
+        if not final_text:
+            return '[שלב 2 (Claude) נכשל להכריע]'
+        return final_text
+
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+    if ext == 'pdf':
+        import fitz
+        all_pages = []
+        doc = fitz.open(filepath)
+        for i in range(len(doc)):
+            pix = doc[i].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+            img_bytes = pix.tobytes('png')
+            text = process_page(img_bytes, 'image/png')
+            all_pages.append(f"--- עמוד {i + 1} ---\n{text}")
+        doc.close()
+        return '\n\n'.join(all_pages)
+
+    mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp'}
+    mime = mime_map.get(ext, 'image/jpeg')
+    with open(filepath, 'rb') as f:
+        img_bytes = f.read()
+    return process_page(img_bytes, mime)
 
 
 def _gemini_ocr(filepath, original_filename):

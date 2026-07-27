@@ -539,7 +539,7 @@ def _gemini_pro_gpt5_vote(filepath, original_filename):
         for attempt in range(3):
             try:
                 response = gemini_client.models.generate_content(
-                    model='gemini-3.1-pro',
+                    model='gemini-3.1-pro-preview',
                     contents=[gtypes.Part.from_bytes(data=img_bytes, mime_type=mime), CANDIDATES_PROMPT],
                     config=gtypes.GenerateContentConfig(
                         response_mime_type='application/json',

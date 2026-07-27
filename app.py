@@ -74,6 +74,7 @@ button:hover{background:#1d4ed8}
     <option value="gpt4o_ocr">קלדן כתב יד - GPT-4o</option>
     <option value="gemini_ocr_10x_vote">🧪 קלדן כתב יד - Gemini (10 הצעות לשורה) + Claude מכריע</option>
     <option value="gemini_5x_gpt4o_vote">🧪 קלדן כתב יד - Gemini (5 הצעות, אפס חשיבה) + GPT-4o בוחר בלבד</option>
+    <option value="gemini_pro_gpt5_vote">🧪 קלדן כתב יד - Gemini Pro (5 הצעות) + GPT-5 בוחר בלבד</option>
   </select>
 
   <label>שפה (רלוונטי לתמלול אודיו/וידאו בלבד)</label>

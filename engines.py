@@ -494,11 +494,14 @@ def _gemini_5x_gpt4o_vote(filepath, original_filename):
 
 
 def _gemini_pro_gpt5_vote(filepath, original_filename):
-    """זהה בדיוק לניסוי gemini_5x_gpt4o_vote, עם שני שינויים בלבד: מודל המועמדים
-    הוא gemini-3.1-pro במקום gemini-3.5-flash (Pro חזק משמעותית מ-Flash, ומצוין
-    ספציפית בעברית/כתבי יד), ומודל השופט הוא gpt-5 במקום gpt-4o. שאר ההיגיון
-    (אימות חזותי מול רשימה סגורה, אסור להמציא) זהה. thinking_budget=0 נשאר
-    כי גם אצלנו וגם ב-Pro זה לא הועיל לדיוק בעבר, רק עלה בעלות."""
+    """זהה בעיקרו לניסוי gemini_5x_gpt4o_vote, עם שני שינויים: מודל המועמדים
+    הוא gemini-3.1-pro-preview במקום gemini-3.5-flash (Pro חזק משמעותית מ-Flash,
+    ומצוין ספציפית בעברית/כתבי יד), ומודל השופט הוא gpt-5 במקום gpt-4o. שאר
+    ההיגיון (אימות חזותי מול רשימה סגורה, אסור להמציא) זהה. הבדל טכני חשוב:
+    ל-Pro Preview, בניגוד ל-Flash, אי אפשר לכבות חשיבה (thinking_budget=0
+    נדחה עם שגיאה - "this model only works in thinking mode") - אז כאן
+    משאירים לו חשיבה דינמית/ברירת מחדל, מה שגם עולה יותר וגם איטי יותר
+    מהגרסה עם Flash."""
     from google import genai
     from google.genai import types as gtypes
     from openai import OpenAI
@@ -543,7 +546,9 @@ def _gemini_pro_gpt5_vote(filepath, original_filename):
                     contents=[gtypes.Part.from_bytes(data=img_bytes, mime_type=mime), CANDIDATES_PROMPT],
                     config=gtypes.GenerateContentConfig(
                         response_mime_type='application/json',
-                        thinking_config=gtypes.ThinkingConfig(thinking_budget=0),
+                        # Pro Preview, בניגוד ל-Flash, לא מאפשר thinking_budget=0
+                        # ("Budget 0 is invalid. This model only works in thinking mode")
+                        # - משאירים חשיבה דינמית/ברירת מחדל, לא קובעים תקציב בכלל
                     ),
                 )
                 raw = (response.text or '').strip()

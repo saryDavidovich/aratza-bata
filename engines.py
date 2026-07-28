@@ -93,6 +93,12 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         elif engine == 'gemini_pro_gpt5_vote':
             text = _gemini_pro_gpt5_vote(filepath, original_filename)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_ocr_preprocessed':
+            text = _gemini_ocr_preprocessed(filepath, original_filename)
+            _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_ocr_redrawn':
+            text = _gemini_ocr_redrawn(filepath, original_filename)
+            _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'gemini':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language)
@@ -623,6 +629,163 @@ def _gemini_pro_gpt5_vote(filepath, original_filename):
         + '\n\n'.join(pages_candidates)
     )
     return body
+
+
+def _enhance_handwriting_image(img_bytes):
+    """עיבוד תמונה קלאסי לפני OCR - לא גנרטיבי, לא 'מצייר מחדש' שום דבר.
+    שני שלבים בלבד: (1) ניקוי רעש עדין (מסיר גרעיניות/כתמים, לא נוגע בצורת
+    הקווים עצמה), (2) הגברת ניגודיות אדפטיבית (CLAHE) שמבליטה דיו מול נייר
+    גם בתאורה לא אחידה. בכוונה *לא* עושה 'שחזור'/'החדדה גנרטיבית' של
+    האותיות - זה בדיוק מה שעלול להמציא צורות אותיות שלא היו במקור."""
+    import cv2
+    import numpy as np
+
+    arr = np.frombuffer(img_bytes, dtype=np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        return img_bytes  # לא הצליח לפענח את התמונה - מחזירים את המקור בלי נגיעה
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    denoised = cv2.fastNlMeansDenoising(gray, h=10, templateWindowSize=7, searchWindowSize=21)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(denoised)
+
+    success, encoded = cv2.imencode('.png', enhanced)
+    return encoded.tobytes() if success else img_bytes
+
+
+def _redraw_handwriting_deterministic(img_bytes):
+    """'ציור מחדש' דטרמיניסטי לגמרי - לא AI, לא מנחש שום צורה. כל פיקסל
+    מוכרע בנפרד לפי כלל מתמטי קבוע וזהה לכולם (ניגודיות מול הפיקסלים
+    בסביבתו המקומית) - לא לפי "הבנה" של איך אמורה להיראות אות. זו בדיוק
+    ההבחנה מציור-מחדש גנרטיבי: כאן אין שום "ידע קודם" על צורת אותיות
+    שמופעל - התוצאה נקבעת אך ורק מהניגודיות הפיזית שכבר הייתה בתמונה.
+
+    שלב 1: סף אדפטיבי (adaptive threshold) - הופך כל פיקסל לשחור/לבן חד,
+    לפי ניגודיות מקומית. זה נותן את המראה ה"מסותת" - קצוות חדים במקום
+    מעברי אפור מטושטשים.
+    שלב 2: ניקוי זעיר (קרנל 2x2 בלבד, בכוונה קטן) שסוגר רק פערים זעירים
+    בתוך אותו קו - לא ממזג בין קווים/אותיות נפרדים."""
+    import cv2
+    import numpy as np
+
+    arr = np.frombuffer(img_bytes, dtype=np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        return img_bytes
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    denoised = cv2.fastNlMeansDenoising(gray, h=10, templateWindowSize=7, searchWindowSize=21)
+
+    binary = cv2.adaptiveThreshold(
+        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
+        blockSize=25, C=10
+    )
+
+    kernel = np.ones((2, 2), np.uint8)
+    cleaned = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+
+    success, encoded = cv2.imencode('.png', cleaned)
+    return encoded.tobytes() if success else img_bytes
+
+
+def _gemini_ocr_redrawn(filepath, original_filename):
+    """ניסוי: 'ציור מחדש' דטרמיניסטי (סף אדפטיבי + ניקוי זעיר, לא AI - ראו
+    _redraw_handwriting_deterministic) לפני שליחה ל-Gemini OCR. שלב אחד
+    מעבר לניקוי-רעש/ניגודיות הרגיל - כאן כל פיקסל מוכרע בבירור כדיו או נייר."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    api_key = os.environ.get('GOOGLE_API_KEY_OCR') or os.environ.get('GOOGLE_API_KEY')
+    client = genai.Client(api_key=api_key)
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+
+    def ocr_image_bytes(img_bytes, mime='image/png'):
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-3.5-flash',
+                    contents=[
+                        gtypes.Part.from_bytes(data=img_bytes, mime_type=mime),
+                        OCR_PROMPT_TEXT,
+                    ]
+                )
+                return (response.text or '').strip()
+            except Exception as e:
+                log.warning(f"Gemini OCR (redrawn) attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    import time; time.sleep(8)
+        return None
+
+    if ext == 'pdf':
+        import fitz
+        all_pages = []
+        doc = fitz.open(filepath)
+        for i in range(len(doc)):
+            pix = doc[i].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+            raw_bytes = pix.tobytes('png')
+            processed_bytes = _redraw_handwriting_deterministic(raw_bytes)
+            text = ocr_image_bytes(processed_bytes, 'image/png')
+            all_pages.append(f"--- עמוד {i + 1} ---\n{text or '[לא קריא]'}")
+        doc.close()
+        return '\n\n'.join(all_pages)
+
+    mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp'}
+    mime = mime_map.get(ext, 'image/jpeg')
+    with open(filepath, 'rb') as f:
+        raw_bytes = f.read()
+    processed_bytes = _redraw_handwriting_deterministic(raw_bytes)
+    return ocr_image_bytes(processed_bytes, 'image/png')
+
+
+def _gemini_ocr_preprocessed(filepath, original_filename):
+    """ניסוי: מריץ עיבוד תמונה קלאסי (ניקוי רעש + הגברת ניגודיות בלבד, לא
+    גנרטיבי - ראו _enhance_handwriting_image) לפני שליחה ל-Gemini OCR.
+    בודק אם ניקוי/הבלטה עוזרים לדיוק, בלי הסיכון של 'שחזור' אותיות גנרטיבי
+    שעלול להמציא צורות שלא היו במקור."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    api_key = os.environ.get('GOOGLE_API_KEY_OCR') or os.environ.get('GOOGLE_API_KEY')
+    client = genai.Client(api_key=api_key)
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+
+    def ocr_image_bytes(img_bytes, mime='image/png'):
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-3.5-flash',
+                    contents=[
+                        gtypes.Part.from_bytes(data=img_bytes, mime_type=mime),
+                        OCR_PROMPT_TEXT,
+                    ]
+                )
+                return (response.text or '').strip()
+            except Exception as e:
+                log.warning(f"Gemini OCR (preprocessed) attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    import time; time.sleep(8)
+        return None
+
+    if ext == 'pdf':
+        import fitz
+        all_pages = []
+        doc = fitz.open(filepath)
+        for i in range(len(doc)):
+            pix = doc[i].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+            raw_bytes = pix.tobytes('png')
+            processed_bytes = _enhance_handwriting_image(raw_bytes)
+            text = ocr_image_bytes(processed_bytes, 'image/png')
+            all_pages.append(f"--- עמוד {i + 1} ---\n{text or '[לא קריא]'}")
+        doc.close()
+        return '\n\n'.join(all_pages)
+
+    mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp'}
+    mime = mime_map.get(ext, 'image/jpeg')
+    with open(filepath, 'rb') as f:
+        raw_bytes = f.read()
+    processed_bytes = _enhance_handwriting_image(raw_bytes)
+    return ocr_image_bytes(processed_bytes, 'image/png')
 
 
 def _gemini_ocr(filepath, original_filename):

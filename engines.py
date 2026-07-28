@@ -9,6 +9,7 @@
 להתאים את זה או להשתמש במנוע AlefBot במקום.
 """
 import os
+import base64
 import io
 import re
 import logging
@@ -99,6 +100,9 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         elif engine == 'gemini_ocr_redrawn':
             text = _gemini_ocr_redrawn(filepath, original_filename)
             _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_ocr_redrawn_preview':
+            image_bytes = _gemini_ocr_redrawn_preview(filepath, original_filename)
+            _send_image_preview_email(result_email, original_filename, image_bytes)
         elif engine == 'gemini':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language)
@@ -687,6 +691,56 @@ def _redraw_handwriting_deterministic(img_bytes):
 
     success, encoded = cv2.imencode('.png', cleaned)
     return encoded.tobytes() if success else img_bytes
+
+
+def _send_image_preview_email(to, original_filename, image_bytes):
+    """שולח את התמונה המעובדת עצמה כקובץ מצורף - בלי שום קריאה ל-Gemini.
+    מיועד לבדיקה/כיוונון: לראות בדיוק מה השרת 'צייר' לפני שמשלמים על קריאת
+    OCR ומחכים לתשובה ממודל."""
+    try:
+        import sendgrid
+        from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType, Disposition
+
+        html = f"""<div dir='rtl' style='font-family:Arial'>
+<h3>🔍 תצוגה מקדימה - עיבוד תמונה (בלי Gemini)</h3>
+<p>קובץ מקור: {original_filename}</p>
+<p>זו התמונה בדיוק כפי שהיא נשלחת ל-Gemini אחרי העיבוד - מצורפת לקובץ.</p>
+</div>"""
+        sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
+        message = Mail(
+            from_email=Email(os.environ.get('SENDGRID_FROM_EMAIL', ''), 'מעבדת בדיקות'),
+            to_emails=to,
+            subject=f"🔍 מעבדה - תצוגה מקדימה - {original_filename}",
+            html_content=html,
+        )
+        encoded = base64.b64encode(image_bytes).decode()
+        message.attachment = Attachment(
+            FileContent(encoded), FileName('preview.png'), FileType('image/png'), Disposition('attachment')
+        )
+        sg.send(message)
+        log.info(f"image preview email sent to {to}")
+    except Exception as e:
+        log.error(f"image preview email error: {e}")
+
+
+def _gemini_ocr_redrawn_preview(filepath, original_filename):
+    """כמו _gemini_ocr_redrawn, אבל בלי קריאה ל-Gemini בכלל - רק מריץ את
+    העיבוד הדטרמיניסטי ומחזיר/שולח את התמונה המעובדת עצמה, כדי לבדוק/לכוונן
+    את הפרמטרים (blockSize, C, גודל קרנל) בלי לבזבז קריאות API."""
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+
+    if ext == 'pdf':
+        import fitz
+        doc = fitz.open(filepath)
+        pix = doc[0].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+        raw_bytes = pix.tobytes('png')
+        doc.close()
+    else:
+        with open(filepath, 'rb') as f:
+            raw_bytes = f.read()
+
+    processed_bytes = _redraw_handwriting_deterministic(raw_bytes)
+    return processed_bytes  # bytes, לא טקסט - הטיפול בשליחה שונה (ראו run_engine)
 
 
 def _gemini_ocr_redrawn(filepath, original_filename):

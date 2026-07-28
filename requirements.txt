@@ -6,3 +6,5 @@ anthropic
 openai
 google-genai
 PyMuPDF
+opencv-python-headless
+numpy

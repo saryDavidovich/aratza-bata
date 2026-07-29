@@ -8,3 +8,4 @@ google-genai
 PyMuPDF
 opencv-python-headless
 numpy
+Pillow

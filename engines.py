@@ -106,6 +106,9 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         elif engine == 'gemini_ocr_template_match':
             image_bytes, text = _gemini_ocr_template_match(filepath, original_filename)
             _send_ocr_experiment_email(result_email, original_filename, engine, image_bytes, text)
+        elif engine == 'gemini_ocr_shape_match':
+            image_bytes, text = _gemini_ocr_shape_match(filepath, original_filename)
+            _send_ocr_experiment_email(result_email, original_filename, engine, image_bytes, text or '[נכשל - בדוק לוגים]')
         elif engine == 'gemini':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language)
@@ -841,6 +844,104 @@ def _template_match_ocr(processed_gray_img):
         result_lines.append(line_text)
 
     return '\n'.join(result_lines)
+
+
+def _build_reference_sheet():
+    """בונה דף ייחוס אחד עם כל 27 אותיות העברית (כתב-יד רהוט, Gveret Levin),
+    כל אחת מתויגת - כדי לשלוח ל-Gemini כ'מילון חזותי' לצורך שיוך צורה בלבד."""
+    from PIL import Image, ImageDraw, ImageFont
+    import io as _io
+
+    font_path = _ensure_gveret_levin_font()
+    font = ImageFont.truetype(font_path, 90)
+    letters = list('אבגדהוזחטיכלמנסעפצקרשתךםןףץ')
+
+    cols, rows = 7, 4
+    cell_w, cell_h = 150, 150
+    sheet = Image.new('L', (cols * cell_w, rows * cell_h), color=255)
+    draw = ImageDraw.Draw(sheet)
+
+    for idx, letter in enumerate(letters):
+        r, c = divmod(idx, cols)
+        cx, cy = c * cell_w, r * cell_h
+        draw.rectangle([cx, cy, cx + cell_w, cy + cell_h], outline=180)
+        bbox = draw.textbbox((0, 0), letter, font=font)
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        draw.text((cx + cell_w / 2 - w / 2 - bbox[0], cy + 15), letter, font=font, fill=0)
+
+    buf = _io.BytesIO()
+    sheet.save(buf, format='PNG')
+    return buf.getvalue()
+
+
+GEMINI_SHAPE_MATCH_PROMPT = """קיבלת שתי תמונות:
+1. "דף ייחוס" - 27 אותיות עברית בכתב-יד רהוט, כל אחת בתא נפרד עם האות הכתובה
+   ליד הצורה (בתוך התא, מעל).
+2. תמונת כתב יד מעובדת (שחור-לבן, אחרי הגדלה וסף).
+
+המשימה שלך: לעבור על הכתב בתמונה השנייה, אות אחר אות (מימין לשמאל, שורה
+אחר שורה), ולכל צורת-כתב לשייך את האות מדף הייחוס שהצורה שלה הכי דומה לה
+מבחינה חזותית טהורה - עקומות, זוויות, מספר קווים. 
+
+חשוב מאוד: זו משימת התאמת-צורות בלבד, לא משימת קריאה/הבנה. אסור לך להשתמש
+בידע שלך על השפה העברית, על מילים נפוצות, או על הקשר תוכני כדי "לנחש" מה
+אמורה להיות האות לפי מה שהגיוני שיהיה כתוב שם. גם אם הצורה מזכירה כמה
+אותיות אפשריות, תבחר את הדומה ביותר גיאומטרית מתוך דף הייחוס בלבד - לא לפי
+מה שהיה "הגיוני" שיהיה שם. אם צורה לא ברורה לחלוטין, סמן אותה ב-# במקום
+לנחש.
+
+החזר את התוצאה כטקסט רציף, שורה אחר שורה כמו במקור, רק אותיות מדף הייחוס
+(ו-# לצורות לא ברורות) - בלי רווחים בין אותיות, בלי הסברים נוספים."""
+
+
+def _gemini_ocr_shape_match(filepath, original_filename):
+    """ניסוי: משלב את החוזק של Gemini (זיהוי חזותי הרבה יותר טוב מהתאמת-
+    פיקסלים גולמית) עם המגבלה הבטוחה שכבר בדקנו (לא לתת לו "להבין תוכן").
+    שולחים לו את התמונה המעובדת + 'דף ייחוס' עם כל האותיות, ומבקשים שיוך
+    צורה-לצורה בלבד, לא תמלול חופשי. לא נבדק בפועל (אין מפתח Gemini אמיתי
+    בסביבת הבדיקה) - יש להריץ ולבדוק תוצאה אמיתית."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+    if ext == 'pdf':
+        import fitz
+        doc = fitz.open(filepath)
+        pix = doc[0].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+        raw_bytes = pix.tobytes('png')
+        doc.close()
+    else:
+        with open(filepath, 'rb') as f:
+            raw_bytes = f.read()
+
+    processed_bytes = _redraw_handwriting_deterministic(raw_bytes)
+    reference_sheet_bytes = _build_reference_sheet()
+
+    api_key = os.environ.get('GOOGLE_API_KEY_OCR') or os.environ.get('GOOGLE_API_KEY')
+    client = genai.Client(api_key=api_key)
+
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=[
+                    gtypes.Part.from_bytes(data=reference_sheet_bytes, mime_type='image/png'),
+                    "^ דף הייחוס (27 אותיות מתויגות)",
+                    gtypes.Part.from_bytes(data=processed_bytes, mime_type='image/png'),
+                    "^ תמונת הכתב לשיוך",
+                    GEMINI_SHAPE_MATCH_PROMPT,
+                ],
+                config=gtypes.GenerateContentConfig(
+                    thinking_config=gtypes.ThinkingConfig(thinking_budget=0),
+                ),
+            )
+            text = (response.text or '').strip()
+            return processed_bytes, text
+        except Exception as e:
+            log.warning(f"shape-match attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                import time; time.sleep(8)
+    return processed_bytes, None
 
 
 def _gemini_ocr_template_match(filepath, original_filename):

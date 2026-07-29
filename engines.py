@@ -103,6 +103,9 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         elif engine == 'gemini_ocr_redrawn_preview':
             image_bytes = _gemini_ocr_redrawn_preview(filepath, original_filename)
             _send_image_preview_email(result_email, original_filename, image_bytes)
+        elif engine == 'gemini_ocr_template_match':
+            image_bytes, text = _gemini_ocr_template_match(filepath, original_filename)
+            _send_ocr_experiment_email(result_email, original_filename, engine, image_bytes, text)
         elif engine == 'gemini':
             public_url = f"{app_base_url}/files/{os.path.basename(filepath)}"
             text = _gemini_transcribe(public_url, language)
@@ -727,6 +730,178 @@ def _send_image_preview_email(to, original_filename, image_bytes):
         log.info(f"image preview email sent to {to}")
     except Exception as e:
         log.error(f"image preview email error: {e}")
+
+
+GVERET_LEVIN_FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'GveretLevin.ttf')
+GVERET_LEVIN_FONT_URL = 'https://github.com/google/fonts/raw/main/ofl/gveretlevin/GveretLevin-Regular.ttf'
+_LETTER_TEMPLATES_CACHE = None
+
+
+def _ensure_gveret_levin_font():
+    """מוריד את הפונט Gveret Levin (כתב-יד רהוט עברי, רישיון OFL פתוח דרך
+    Google Fonts) פעם אחת ושומר מקומית, כדי לא להוריד בכל בקשה."""
+    if not os.path.exists(GVERET_LEVIN_FONT_PATH):
+        r = requests.get(GVERET_LEVIN_FONT_URL, timeout=30)
+        r.raise_for_status()
+        with open(GVERET_LEVIN_FONT_PATH, 'wb') as f:
+            f.write(r.content)
+    return GVERET_LEVIN_FONT_PATH
+
+
+def _build_letter_templates():
+    """בונה תבניות ייחוס לכל אות עברית (כולל סופיות) מתוך פונט כתב-יד רהוט,
+    לא פונט מודפס - כי בבדיקה אמפירית זה שיפר את ציון ההתאמה פי 2.5. נשמר
+    בזיכרון אחרי הבנייה הראשונה (לא נבנה מחדש בכל בקשה)."""
+    global _LETTER_TEMPLATES_CACHE
+    if _LETTER_TEMPLATES_CACHE is not None:
+        return _LETTER_TEMPLATES_CACHE
+
+    import cv2
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont
+
+    font_path = _ensure_gveret_levin_font()
+    font = ImageFont.truetype(font_path, 150)
+    letters = list('אבגדהוזחטיכלמנסעפצקרשתךםןףץ')
+    TEMPLATE_SIZE = 64
+    templates = {}
+    for letter in letters:
+        img = Image.new('L', (200, 200), color=255)
+        draw = ImageDraw.Draw(img)
+        bbox = draw.textbbox((0, 0), letter, font=font)
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        if w == 0 or h == 0:
+            continue
+        draw.text((100 - w / 2 - bbox[0], 100 - h / 2 - bbox[1]), letter, font=font, fill=0)
+        arr = np.array(img)
+        _, binary = cv2.threshold(arr, 127, 255, cv2.THRESH_BINARY_INV)
+        ys, xs = np.where(binary > 0)
+        if len(xs) == 0:
+            continue
+        crop = binary[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        templates[letter] = cv2.resize(crop, (TEMPLATE_SIZE, TEMPLATE_SIZE))
+
+    _LETTER_TEMPLATES_CACHE = templates
+    return templates
+
+
+def _template_match_ocr(processed_gray_img):
+    """שלב 2: מפלח את התמונה המעובדת (שחור/לבן) לרכיבים מחוברים, ומתאים כל
+    רכיב לאות הכי קרובה מתוך התבניות - קרבה גיאומטרית בלבד (correlation),
+    לא הבנה/הקשר. מקבץ לשורות לפי מיקום Y, וממיין ימין-לשמאל בתוך כל שורה.
+    זו בדיוק השיטה שבדקנו ידנית על שורה אחת - כאן על התמונה כולה."""
+    import cv2
+    import numpy as np
+
+    templates = _build_letter_templates()
+    TEMPLATE_SIZE = 64
+
+    binary_img = cv2.bitwise_not(processed_gray_img)
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary_img, connectivity=8)
+
+    components = []
+    for i in range(1, num_labels):
+        x, y, w, h, area = stats[i]
+        if area < 15 or area > 3000:
+            continue
+        components.append((x, y, w, h))
+
+    if not components:
+        return '(לא זוהו רכיבי כתב בתמונה)'
+
+    components.sort(key=lambda c: c[1] + c[3] / 2)
+    lines = [[components[0]]]
+    current_y = components[0][1] + components[0][3] / 2
+    for comp in components[1:]:
+        cy = comp[1] + comp[3] / 2
+        if abs(cy - current_y) > 60:
+            lines.append([comp])
+        else:
+            lines[-1].append(comp)
+        current_y = cy
+
+    def match_component(comp_binary):
+        ys, xs = np.where(comp_binary > 0)
+        if len(xs) == 0:
+            return ''
+        crop = comp_binary[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        resized = cv2.resize(crop, (TEMPLATE_SIZE, TEMPLATE_SIZE))
+        best_letter, best_score = '', -1
+        for letter, tmpl in templates.items():
+            result = cv2.matchTemplate(resized.astype(np.float32), tmpl.astype(np.float32), cv2.TM_CCOEFF_NORMED)
+            score = result[0][0]
+            if score > best_score:
+                best_score, best_letter = score, letter
+        return best_letter
+
+    result_lines = []
+    for line in lines:
+        line.sort(key=lambda c: -c[0])  # ימין לשמאל
+        line_text = ''.join(match_component(binary_img[y:y + h, x:x + w]) for (x, y, w, h) in line)
+        result_lines.append(line_text)
+
+    return '\n'.join(result_lines)
+
+
+def _gemini_ocr_template_match(filepath, original_filename):
+    """ניסוי: עוקף את Gemini לגמרי. שלב 1 - אותו עיבוד תמונה שכבר אישרנו
+    שעובד (הגדלה פי 4 + סף אדפטיבי, ראו _redraw_handwriting_deterministic).
+    שלב 2 - התאמת כל רכיב-כתב לאות הכי קרובה מתוך תבניות כתב-יד רהוט
+    (Gveret Levin), בלי שום 'הבנה' - קרבה גיאומטרית בלבד. מחזיר גם את
+    התמונה המעובדת וגם את הטקסט, כדי לשלוח את שניהם למייל יחד."""
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+
+    if ext == 'pdf':
+        import fitz
+        doc = fitz.open(filepath)
+        pix = doc[0].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+        raw_bytes = pix.tobytes('png')
+        doc.close()
+    else:
+        with open(filepath, 'rb') as f:
+            raw_bytes = f.read()
+
+    processed_bytes = _redraw_handwriting_deterministic(raw_bytes)
+
+    import cv2
+    import numpy as np
+    arr = np.frombuffer(processed_bytes, dtype=np.uint8)
+    processed_gray = cv2.imdecode(arr, cv2.IMREAD_GRAYSCALE)
+
+    text_result = _template_match_ocr(processed_gray)
+    return processed_bytes, text_result
+
+
+def _send_ocr_experiment_email(to, original_filename, engine, image_bytes, text):
+    """שולח מייל אחד עם שני חלקים: התמונה המעובדת (מצורפת) + התוצאה הכתובה
+    (בגוף המייל) - כדי שאפשר יהיה להשוות בין הקלט לתמונה לתוצאה בבת אחת."""
+    try:
+        import sendgrid
+        from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType, Disposition
+
+        safe_text = (text or '').replace('<', '&lt;').replace('>', '&gt;')
+        html = f"""<div dir='rtl' style='font-family:Arial;max-width:600px'>
+<h3>🧪 מעבדה - התאמת תבניות (בלי Gemini) - {original_filename}</h3>
+<p style='color:#6b7280'>מנוע: {engine}</p>
+<p>התמונה המעובדת (זו שנשלחה להתאמה) מצורפת לקובץ.</p>
+<h4>התוצאה שהמערכת "הקלידה" (התאמה גיאומטרית בלבד, בלי הבנה):</h4>
+<div style='white-space:pre-wrap;background:#fef3c7;border-right:4px solid #f59e0b;padding:16px;border-radius:8px;line-height:1.8;font-size:20px;direction:rtl'>{safe_text}</div>
+</div>"""
+        sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
+        message = Mail(
+            from_email=Email(os.environ.get('SENDGRID_FROM_EMAIL', ''), 'מעבדת בדיקות'),
+            to_emails=to,
+            subject=f"🧪 מעבדה - התאמת תבניות - {original_filename}",
+            html_content=html,
+        )
+        encoded = base64.b64encode(image_bytes).decode()
+        message.attachment = Attachment(
+            FileContent(encoded), FileName('processed.png'), FileType('image/png'), Disposition('attachment')
+        )
+        sg.send(message)
+        log.info(f"ocr experiment email sent to {to}")
+    except Exception as e:
+        log.error(f"ocr experiment email error: {e}")
 
 
 def _gemini_ocr_redrawn_preview(filepath, original_filename):

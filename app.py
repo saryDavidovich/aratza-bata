@@ -210,6 +210,7 @@ button:hover{background:#1d4ed8}
     <option value="gemini_ocr_preprocessed">🧪 קלדן כתב יד - עם ניקוי רעש + הגברת ניגודיות (לפני Gemini)</option>
     <option value="gemini_ocr_redrawn">🧪 קלדן כתב יד - ציור מחדש דטרמיניסטי (סף אדפטיבי, לא AI)</option>
     <option value="gemini_ocr_redrawn_preview">🔍 תצוגה מקדימה - התמונה המעובדת בלבד (בלי Gemini)</option>
+    <option value="gemini_ocr_template_match">🧪 ניסוי - התאמת תבניות כתב-יד (בלי Gemini בכלל)</option>
   </select>
 
   <label>שפה (רלוונטי לתמלול אודיו/וידאו בלבד)</label>

@@ -665,9 +665,14 @@ def _redraw_handwriting_deterministic(img_bytes):
     ההבחנה מציור-מחדש גנרטיבי: כאן אין שום "ידע קודם" על צורת אותיות
     שמופעל - התוצאה נקבעת אך ורק מהניגודיות הפיזית שכבר הייתה בתמונה.
 
+    שלב 0: הגדלה פי 4 (400%) עם אינטרפולציה חלקה (cubic) *לפני* הסף -
+    בבדיקה הראשונה (בלי הגדלה) קווי עיפרון דקים נשברו לגמרי בסף האדפטיבי
+    כי blockSize=25 היה גס מדי יחסית לעובי הקו בפועל. הגדלה נותנת לקו
+    "מקום לנשום" כך שהסף מקבל גבולות חלקים במקום קפיצות חדות שמייצרות
+    שברים. עדיין 100% דטרמיניסטי - שינוי גודל הוא אינטרפולציה מתמטית, לא ניחוש.
     שלב 1: סף אדפטיבי (adaptive threshold) - הופך כל פיקסל לשחור/לבן חד,
     לפי ניגודיות מקומית. זה נותן את המראה ה"מסותת" - קצוות חדים במקום
-    מעברי אפור מטושטשים.
+    מעברי אפור מטושטשים. blockSize/C כוילו מחדש ביחס לגודל התמונה המוגדל.
     שלב 2: ניקוי זעיר (קרנל 2x2 בלבד, בכוונה קטן) שסוגר רק פערים זעירים
     בתוך אותו קו - לא ממזג בין קווים/אותיות נפרדים."""
     import cv2
@@ -679,11 +684,12 @@ def _redraw_handwriting_deterministic(img_bytes):
         return img_bytes
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    denoised = cv2.fastNlMeansDenoising(gray, h=10, templateWindowSize=7, searchWindowSize=21)
+    upscaled = cv2.resize(gray, None, fx=4.0, fy=4.0, interpolation=cv2.INTER_CUBIC)
+    denoised = cv2.fastNlMeansDenoising(upscaled, h=10, templateWindowSize=7, searchWindowSize=21)
 
     binary = cv2.adaptiveThreshold(
         denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
-        blockSize=25, C=10
+        blockSize=51, C=12
     )
 
     kernel = np.ones((2, 2), np.uint8)

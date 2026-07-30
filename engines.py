@@ -73,11 +73,17 @@ OCR_PROMPT_TEXT = """אתה סורק OCR מכני לכתב יד עברי בלב�
 התחל ישירות:"""
 
 
-def run_engine(filepath, original_filename, engine, language, result_email, app_base_url):
-    """נקודת הכניסה היחידה - נקראת מ-thread נפרד ב-app.py."""
+def run_engine(filepath, original_filename, engine, language, result_email, app_base_url,
+                ref_image_path=None, ref_text=None):
+    """נקודת הכניסה היחידה - נקראת מ-thread נפרד ב-app.py.
+    ref_image_path/ref_text רלוונטיים רק למנוע gemini_ocr_with_reference - דוגמת
+    ייחוס (תמונת כתב יד + התמלול המדויק שהוכן לה בעבר) מאותו כותב."""
     try:
         if engine == 'gemini_ocr':
             text = _gemini_ocr(filepath, original_filename)
+            _send_result_email(result_email, original_filename, engine, text)
+        elif engine == 'gemini_ocr_with_reference':
+            text = _gemini_ocr_with_reference(filepath, original_filename, ref_image_path, ref_text)
             _send_result_email(result_email, original_filename, engine, text)
         elif engine == 'claude_ocr':
             text = _claude_ocr(filepath, original_filename)
@@ -177,6 +183,11 @@ def run_engine(filepath, original_filename, engine, language, result_email, app_
         try:
             if engine != 'alefbot' and os.path.exists(filepath):
                 os.remove(filepath)
+        except Exception:
+            pass
+        try:
+            if ref_image_path and os.path.exists(ref_image_path):
+                os.remove(ref_image_path)
         except Exception:
             pass
 
@@ -1167,6 +1178,90 @@ def _gemini_ocr(filepath, original_filename):
     with open(filepath, 'rb') as f:
         img_bytes = f.read()
     return ocr_image_bytes(img_bytes, mime)
+
+
+def _load_image_bytes_and_mime(path):
+    """טוען תמונה מהדיסק כ-bytes+mime; אם זה PDF, ממיר את העמוד הראשון לתמונה.
+    משותף בין _gemini_ocr_with_reference (לתמונת הדוגמה) לבין הקובץ החדש."""
+    p_ext = os.path.splitext(path)[1].lstrip('.').lower()
+    if p_ext == 'pdf':
+        import fitz
+        doc = fitz.open(path)
+        pix = doc[0].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+        img_bytes = pix.tobytes('png')
+        doc.close()
+        return img_bytes, 'image/png'
+    mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp'}
+    with open(path, 'rb') as f:
+        return f.read(), mime_map.get(p_ext, 'image/jpeg')
+
+
+REFERENCE_INTRO_TEXT = """להלן דוגמת ייחוס: תמונת כתב יד קודמת מאותו כותב, ומיד אחריה התמלול
+המדויק שהוכן לה בעבר (נבדק ואושר ע"י בנאדם). המטרה היחידה של הדוגמה הזו היא
+שתכיר את צורת האותיות/סגנון הכתיבה האישי של הכותב הספציפי הזה - לא כמקור
+תוכן. אסור לך להעתיק ממנה מילים אל תוך התמלול של התמונה החדשה למטה; היא
+משמשת רק לכיול חזותי לצורת הכתב שלו."""
+
+NEW_IMAGE_INTRO_TEXT = "כעת התמונה החדשה לתמלול (כתב יד של אותו כותב) - תעתיק אך ורק אותה, לפי הכללים הבאים:"
+
+
+def _gemini_ocr_with_reference(filepath, original_filename, ref_image_path, ref_text):
+    """כמו _gemini_ocr הרגיל, אבל עם דוגמת ייחוס אחת (one-shot in-context):
+    תמונת כתב יד קודמת מאותו כותב + התמלול המדויק שהוכן לה בעבר, נשלחים יחד
+    עם התמונה החדשה באותה קריאה - כדי ש-Gemini "יתכייל" לצורת האותיות
+    הספציפית של הכותב הזה. הערה: זה לא אימון אמיתי של המודל (אין fine-tuning) -
+    הדוגמה נשלחת מחדש כהקשר (few-shot) בכל קריאה, מה שמגדיל מעט את עלות/גודל
+    הקריאה אבל לא דורש שום תשתית נוספת."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    if not ref_image_path or not ref_text:
+        raise ValueError("מנוע gemini_ocr_with_reference דורש גם תמונת דוגמה וגם תמלול מדויק עבורה")
+
+    api_key = os.environ.get('GOOGLE_API_KEY_OCR') or os.environ.get('GOOGLE_API_KEY')
+    client = genai.Client(api_key=api_key)
+    ext = os.path.splitext(original_filename or filepath)[1].lstrip('.').lower()
+    mime_map = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp'}
+
+    ref_img_bytes, ref_mime = _load_image_bytes_and_mime(ref_image_path)
+
+    def ocr_new_image_bytes(img_bytes, mime):
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-3.5-flash',
+                    contents=[
+                        REFERENCE_INTRO_TEXT,
+                        gtypes.Part.from_bytes(data=ref_img_bytes, mime_type=ref_mime),
+                        f"התמלול המדויק של תמונת הדוגמה:\n{ref_text}",
+                        NEW_IMAGE_INTRO_TEXT,
+                        gtypes.Part.from_bytes(data=img_bytes, mime_type=mime),
+                        OCR_PROMPT_TEXT,
+                    ]
+                )
+                return (response.text or '').strip()
+            except Exception as e:
+                log.warning(f"Gemini OCR (with reference) attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    import time; time.sleep(8)
+        return None
+
+    if ext == 'pdf':
+        import fitz
+        all_pages = []
+        doc = fitz.open(filepath)
+        for i in range(len(doc)):
+            pix = doc[i].get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+            img_bytes = pix.tobytes('png')
+            text = ocr_new_image_bytes(img_bytes, 'image/png')
+            all_pages.append(f"--- עמוד {i + 1} ---\n{text or '[לא קריא]'}")
+        doc.close()
+        return '\n\n'.join(all_pages)
+
+    mime = mime_map.get(ext, 'image/jpeg')
+    with open(filepath, 'rb') as f:
+        img_bytes = f.read()
+    return ocr_new_image_bytes(img_bytes, mime)
 
 
 # ---------------------------------------------------------------- תמלול אודיו/וידאו

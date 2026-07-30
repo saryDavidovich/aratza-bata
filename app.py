@@ -110,6 +110,39 @@ def _build_gemini_contents(chat_id, new_prompt):
     return contents
 
 
+MAX_UPLOAD_IMAGE_SIZE = 15 * 1024 * 1024  # 15MB - מספיק לתמונה מהטלפון, לא יעמיס על הזיכרון/Gemini
+UPLOAD_IMAGE_EXT = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'heif'}
+
+
+def _normalize_uploaded_image(file_storage):
+    """הופך קובץ תמונה שהועלה (כל פורמט נתמך - jpg/webp/heic/וכו') ל-PNG תקין,
+    כדי שיישמר ויישלח ל-Gemini באותו פורמט אחיד שכל שאר הקוד כבר מצפה לו
+    (image_filename תמיד .png, mime_type תמיד image/png ב-_build_gemini_contents).
+    מחזיר bytes של PNG, או זורק חריגה אם הקובץ לא תקין/לא תמונה בכלל."""
+    from PIL import Image
+    import io
+    try:
+        import pillow_heif
+        pillow_heif.register_heif_opener()  # מאפשר ל-Pillow לפענח HEIC/HEIF (תמונות אייפון)
+    except ImportError:
+        pass  # אם החבילה לא מותקנת, תמונות HEIC/HEIF פשוט ייכשלו עם שגיאה ברורה למטה
+
+    raw = file_storage.read()
+    if not raw:
+        raise ValueError("הקובץ שהועלה ריק")
+    if len(raw) > MAX_UPLOAD_IMAGE_SIZE:
+        raise ValueError(f"התמונה גדולה מדי ({len(raw)//1024//1024}MB, מקסימום {MAX_UPLOAD_IMAGE_SIZE//1024//1024}MB)")
+
+    img = Image.open(io.BytesIO(raw))
+    img.load()  # מוודא שהקובץ באמת ניתן לפענוח, לא רק שיש לו סיומת תמונה
+    if img.mode not in ('RGB', 'RGBA'):
+        img = img.convert('RGBA' if 'A' in img.getbands() else 'RGB')
+
+    out = io.BytesIO()
+    img.save(out, format='PNG')
+    return out.getvalue()
+
+
 def _generate_image_turn(chat_id, prompt_text):
     from google import genai
     from google.genai import types as gtypes
@@ -321,7 +354,7 @@ label{display:block;font-weight:bold;font-size:13px;margin-top:10px}
   <h2>🎨 צ'אט תמונות - Gemini</h2>
   <a class="newchat" href="/imagechat?access_code={{ access_code }}">🆕 שיחה חדשה</a>
 </div>
-<p class="note">כל תמונה שנוצרת נשלחת גם למייל. אפשר לבקש תיקונים בהמשך השיחה - הוא זוכר על איזו תמונה מדובר.</p>
+<p class="note">כל תמונה שנוצרת נשלחת גם למייל. אפשר לבקש תיקונים בהמשך השיחה - הוא זוכר על איזו תמונה מדובר. אפשר גם להעלות תמונה קיימת משלכם ולבקש לשפר/לתקן אותה.</p>
 
 {% if error %}<div style="color:#991b1b;background:#fef2f2;padding:10px;border-radius:6px;margin:10px 0">{{ error }}</div>{% endif %}
 
@@ -334,16 +367,19 @@ label{display:block;font-weight:bold;font-size:13px;margin-top:10px}
 </div>
 {% endfor %}
 
-<form class="chatform" method="post" action="/imagechat/send" style="flex-direction:column;align-items:stretch">
+<form class="chatform" method="post" action="/imagechat/send" enctype="multipart/form-data" style="flex-direction:column;align-items:stretch">
   <input type="hidden" name="access_code" value="{{ access_code }}">
   <input type="hidden" name="chat_id" value="{{ chat_id }}">
   {% if not messages %}
   <label>שלח את התמונות למייל</label>
   <input type="email" name="email" value="{{ default_email }}" required>
   {% endif %}
-  <label>{% if messages %}תיקון / המשך{% else %}מה ליצור{% endif %}</label>
+  <label>העלאת תמונה לשיפור/עריכה (אופציונלי)</label>
+  <input type="file" name="image" accept="image/*">
+  <p class="note" style="margin-top:4px">אם מעלים תמונה - אפשר לכתוב למטה מה לשפר/לתקן בה (או להשאיר ריק לשיפור כללי).</p>
+  <label>{% if messages %}תיקון / המשך{% else %}מה ליצור (או מה לשפר בתמונה שהעליתם){% endif %}</label>
   <div style="display:flex;gap:8px;align-items:flex-end">
-    <textarea name="prompt" rows="2" required placeholder="{% if messages %}תאר תיקון או המשך...{% else %}תאר את התמונה שתרצה ליצור...{% endif %}"></textarea>
+    <textarea name="prompt" rows="2" placeholder="{% if messages %}תאר תיקון או המשך...{% else %}תאר את התמונה שתרצה ליצור, או תיאור לשיפור התמונה שהעליתם...{% endif %}"></textarea>
     <button type="submit">שלח</button>
   </div>
 </form>
@@ -398,12 +434,39 @@ def imagechat_send():
     prompt = (request.form.get('prompt') or '').strip()
     email = (request.form.get('email') or LAB_DEFAULT_EMAIL or '').strip()
 
-    if not prompt:
+    uploaded_file = request.files.get('image')
+    has_uploaded_file = bool(uploaded_file and uploaded_file.filename)
+
+    if not prompt and not has_uploaded_file:
         messages = _load_image_chat_messages(chat_id)
         return render_template_string(
             IMAGE_CHAT_HTML, messages=messages, chat_id=chat_id,
-            access_code=access_code, default_email=LAB_DEFAULT_EMAIL, error="יש לכתוב בקשה"
+            access_code=access_code, default_email=LAB_DEFAULT_EMAIL, error="יש לכתוב בקשה ו/או להעלות תמונה"
         )
+
+    uploaded_png_bytes = None
+    if has_uploaded_file:
+        ext = os.path.splitext(uploaded_file.filename)[1].lstrip('.').lower()
+        if ext not in UPLOAD_IMAGE_EXT:
+            messages = _load_image_chat_messages(chat_id)
+            return render_template_string(
+                IMAGE_CHAT_HTML, messages=messages, chat_id=chat_id,
+                access_code=access_code, default_email=LAB_DEFAULT_EMAIL,
+                error=f"סוג קובץ לא נתמך: .{ext}"
+            )
+        try:
+            uploaded_png_bytes = _normalize_uploaded_image(uploaded_file)
+        except Exception as e:
+            log.error(f"imagechat upload normalize error: {e}")
+            messages = _load_image_chat_messages(chat_id)
+            return render_template_string(
+                IMAGE_CHAT_HTML, messages=messages, chat_id=chat_id,
+                access_code=access_code, default_email=LAB_DEFAULT_EMAIL,
+                error=f"שגיאה בקריאת התמונה שהועלתה: {e}"
+            )
+        if not prompt:
+            # תמונה בלי הנחיה - שיפור כללי, בלי לשנות את התוכן/הזהות של התמונה
+            prompt = "שפר את איכות התמונה הזו (חדות, תאורה, ניגודיות, רעש) בלי לשנות את התוכן שלה."
 
     conn = _image_chat_db()
     exists = conn.execute("SELECT email FROM image_chats WHERE id=?", (chat_id,)).fetchone()
@@ -415,7 +478,7 @@ def imagechat_send():
         email = exists[0] or email  # שיחה קיימת - משתמשים במייל שכבר נשמר לה, לא בשדה הטופס (שריק בהמשך שיחה)
     conn.close()
 
-    _save_image_chat_message(chat_id, 'user', prompt)
+    _save_image_chat_message(chat_id, 'user', prompt, image_bytes=uploaded_png_bytes)
 
     try:
         image_bytes, reply_text = _generate_image_turn(chat_id, prompt)

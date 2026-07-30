@@ -222,6 +222,15 @@ button:hover{background:#1d4ed8}
   <label>קובץ (אודיו / וידאו / תמונת כתב יד / PDF)</label>
   <input type="file" name="file" required>
 
+  <fieldset style="margin-top:16px;border:1px solid #ddd;border-radius:8px;padding:10px 14px">
+    <legend style="font-size:13px;font-weight:bold;padding:0 6px">דוגמת ייחוס אישית (רק עבור מנוע "עם דוגמת ייחוס")</legend>
+    <label>תמונת כתב יד לדוגמה (מאותו כותב)</label>
+    <input type="file" name="ref_image" accept="image/*,.pdf">
+    <label>התמלול המדויק שהוכן בעבר לדוגמה הזו (קובץ .txt)</label>
+    <input type="file" name="ref_text_file" accept=".txt">
+    <p class="note" style="margin-top:6px">שני השדות האלה משמשים רק את מנוע "קלדן כתב יד - עם דוגמת ייחוס אישית" למטה - הם נשלחים ל-Gemini יחד עם הקובץ החדש כדי שיכיר את סגנון הכתב של הכותב הספציפי. לשאר המנועים אפשר להשאיר ריק.</p>
+  </fieldset>
+
   <label>מנוע</label>
   <select name="engine">
     <option value="auto">אוטומטי (לפי סוג הקובץ)</option>
@@ -237,6 +246,7 @@ button:hover{background:#1d4ed8}
     <option value="gemini_ocr">קלדן כתב יד - Gemini</option>
     <option value="claude_ocr">קלדן כתב יד - Claude</option>
     <option value="gpt4o_ocr">קלדן כתב יד - GPT-4o</option>
+    <option value="gemini_ocr_with_reference">🧪 קלדן כתב יד - עם דוגמת ייחוס אישית (כתב יד + תמלול מדויק מאותו כותב)</option>
     <option value="gemini_ocr_10x_vote">🧪 קלדן כתב יד - Gemini (10 הצעות לשורה) + Claude מכריע</option>
     <option value="gemini_5x_gpt4o_vote">🧪 קלדן כתב יד - Gemini (5 הצעות, אפס חשיבה) + GPT-4o בוחר בלבד</option>
     <option value="gemini_pro_gpt5_vote">🧪 קלדן כתב יד - Gemini Pro (5 הצעות) + GPT-5 בוחר בלבד</option>
@@ -305,6 +315,46 @@ def run():
             FORM_HTML, message=f"סיומת קובץ לא מזוהה: .{ext}", ok=False, default_email=result_email
         ), 400
 
+    ref_image_path = None
+    ref_text_content = None
+    if engine == 'gemini_ocr_with_reference':
+        ref_image_file = request.files.get('ref_image')
+        ref_text_file = request.files.get('ref_text_file')
+        if not (ref_image_file and ref_image_file.filename) or not (ref_text_file and ref_text_file.filename):
+            return render_template_string(
+                FORM_HTML,
+                message="מנוע \"עם דוגמת ייחוס אישית\" דורש גם תמונת דוגמה וגם קובץ תמלול מדויק (.txt) עבורה",
+                ok=False, default_email=result_email
+            ), 400
+
+        ref_ext = os.path.splitext(ref_image_file.filename)[1].lstrip('.').lower()
+        if ref_ext not in IMAGE_PDF_EXT:
+            return render_template_string(
+                FORM_HTML, message=f"סוג קובץ לא נתמך לתמונת הדוגמה: .{ref_ext}",
+                ok=False, default_email=result_email
+            ), 400
+
+        ref_token = uuid.uuid4().hex
+        ref_image_path = os.path.join(UPLOAD_DIR, f"{ref_token}_ref.{ref_ext}")
+        ref_image_file.save(ref_image_path)
+
+        raw_ref_text = ref_text_file.read()
+        for encoding in ('utf-8', 'cp1255', 'latin-1'):
+            try:
+                ref_text_content = raw_ref_text.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        if ref_text_content is None:
+            ref_text_content = raw_ref_text.decode('utf-8', errors='replace')
+        ref_text_content = ref_text_content.strip()
+        if not ref_text_content:
+            if os.path.exists(ref_image_path):
+                os.remove(ref_image_path)
+            return render_template_string(
+                FORM_HTML, message="קובץ התמלול המדויק לדוגמה ריק", ok=False, default_email=result_email
+            ), 400
+
     token = uuid.uuid4().hex
     save_path = os.path.join(UPLOAD_DIR, f"{token}.{ext}")
     f.save(save_path)
@@ -312,7 +362,7 @@ def run():
     from engines import run_engine
     threading.Thread(
         target=run_engine,
-        args=(save_path, f.filename, engine, language, result_email, APP_BASE_URL),
+        args=(save_path, f.filename, engine, language, result_email, APP_BASE_URL, ref_image_path, ref_text_content),
         daemon=True
     ).start()
 

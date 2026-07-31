@@ -295,8 +295,23 @@ def _download_youtube(url, dest_dir, mode):
     token = uuid.uuid4().hex
     out_template = os.path.join(dest_dir, f"{token}.%(ext)s")
 
+    # יוטיוב חוסם לעיתים קרובות בקשות מכתובות IP של שרתי ענן (כמו Railway)
+    # בחשד לבוט. שימוש בלקוחות ה-API של אפליקציית המובייל (android/ios) במקום
+    # לקוח האתר הרגיל בדרך כלל עוקף את זה בלי צורך בהתחברות/עוגיות בכלל.
+    # אם עדיין נחסם - אפשר להגדיר משתנה סביבה YOUTUBE_COOKIES_FILE עם נתיב
+    # לקובץ cookies.txt שיוצא מדפדפן מחובר ליוטיוב (ראה תיעוד yt-dlp:
+    # https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp).
+    base_opts = {
+        'quiet': True,
+        'noplaylist': True,
+        'extractor_args': {'youtube': {'player_client': ['android', 'ios', 'web']}},
+    }
+    cookies_file = os.environ.get('YOUTUBE_COOKIES_FILE')
+    if cookies_file and os.path.exists(cookies_file):
+        base_opts['cookiefile'] = cookies_file
+
     # רק שולפים מידע (בלי להוריד) כדי לקבל את הכותרת האמיתית לשם הקובץ
-    with yt_dlp.YoutubeDL({'quiet': True, 'noplaylist': True}) as ydl:
+    with yt_dlp.YoutubeDL(base_opts) as ydl:
         info = ydl.extract_info(url, download=False)
 
     title = info.get('title') or 'youtube_video'
@@ -305,8 +320,7 @@ def _download_youtube(url, dest_dir, mode):
 
     if mode == 'audio':
         ydl_opts = {
-            'quiet': True,
-            'noplaylist': True,
+            **base_opts,
             'format': 'bestaudio/best',
             'outtmpl': out_template,
             'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}],
@@ -316,8 +330,7 @@ def _download_youtube(url, dest_dir, mode):
         mimetype = 'audio/mpeg'
     else:
         ydl_opts = {
-            'quiet': True,
-            'noplaylist': True,
+            **base_opts,
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'outtmpl': out_template,
             'merge_output_format': 'mp4',

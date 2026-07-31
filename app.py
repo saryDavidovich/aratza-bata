@@ -386,22 +386,28 @@ def youtube_download_run():
     if not youtube_url:
         return render_template_string(YOUTUBE_HTML, error="יש להדביק קישור יוטיוב"), 400
 
+    filepath = None
     try:
         filepath, download_filename, mimetype = _download_youtube(youtube_url, UPLOAD_DIR, mode)
+
+        @after_this_request
+        def _cleanup(response):
+            try:
+                if filepath and os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception:
+                pass
+            return response
+
+        return send_file(filepath, as_attachment=True, download_name=download_filename, mimetype=mimetype)
     except Exception as e:
-        log.error(f"youtube download error: {e}")
-        return render_template_string(YOUTUBE_HTML, error=f"שגיאה בהורדה מיוטיוב: {e}"), 400
-
-    @after_this_request
-    def _cleanup(response):
-        try:
-            if os.path.exists(filepath):
+        log.error(f"youtube download error: {e}", exc_info=True)
+        if filepath and os.path.exists(filepath):
+            try:
                 os.remove(filepath)
-        except Exception:
-            pass
-        return response
-
-    return send_file(filepath, as_attachment=True, download_name=download_filename, mimetype=mimetype)
+            except Exception:
+                pass
+        return render_template_string(YOUTUBE_HTML, error=f"שגיאה בהורדה מיוטיוב: {e}"), 400
 
 
 @app.route('/run', methods=['POST'])

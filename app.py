@@ -287,6 +287,10 @@ def _download_youtube(url, dest_dir, mode):
     מחזיר (filepath, download_filename, mimetype) או זורק חריגה עם הודעה
     קריאה אם נכשל (סרטון פרטי/לא קיים וכו') - בלי הגבלת אורך."""
     import yt_dlp
+    import imageio_ffmpeg
+
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()  # בינארי ffmpeg סטטי שמותקן דרך pip -
+    # לא תלוי בהתקנת מערכת (apt) שלא תמיד זמינה/נשמרת בפלטפורמת הענן
 
     token = uuid.uuid4().hex
     out_template = os.path.join(dest_dir, f"{token}.%(ext)s")
@@ -306,6 +310,7 @@ def _download_youtube(url, dest_dir, mode):
             'format': 'bestaudio/best',
             'outtmpl': out_template,
             'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}],
+            'ffmpeg_location': ffmpeg_path,
         }
         final_ext = 'mp3'
         mimetype = 'audio/mpeg'
@@ -316,6 +321,7 @@ def _download_youtube(url, dest_dir, mode):
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'outtmpl': out_template,
             'merge_output_format': 'mp4',
+            'ffmpeg_location': ffmpeg_path,
         }
         final_ext = 'mp4'
         mimetype = 'video/mp4'

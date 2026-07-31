@@ -1,0 +1,5 @@
+# מתקין את ffmpeg כחבילת מערכת (apt) בזמן ה-build של Railway/Nixpacks -
+# נדרש ל-yt-dlp כדי למזג וידאו+אודיו (mp4) ולהמיר אודיו ל-mp3. pip לא יכול
+# להתקין את זה כי זו תוכנה ברמת מערכת ההפעלה, לא חבילת Python.
+[phases.setup]
+aptPkgs = ["ffmpeg"]

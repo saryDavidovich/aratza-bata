@@ -11,6 +11,7 @@
 בלי שום השפעה על המערכת שהלקוחות משתמשים בה עכשיו.
 """
 import os
+import re
 import uuid
 import logging
 import threading
@@ -18,7 +19,7 @@ import sqlite3
 import base64
 from datetime import datetime
 
-from flask import Flask, request, render_template_string, send_from_directory, redirect, url_for
+from flask import Flask, request, render_template_string, send_from_directory, redirect, url_for, send_file, after_this_request
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -214,6 +215,7 @@ button:hover{background:#1d4ed8}
 <h2>🧪 מעבדת בדיקות - תמלול וקלדן</h2>
 <p class="note">פרויקט עצמאי לניסויים בלבד. אין לזה שום קשר למערכת הלקוחות הפעילה.</p>
 <p><a href="/imagechat" style="color:#2563eb;text-decoration:none;font-weight:bold">🎨 צ'אט תמונות עם Gemini (יצירת תמונות + שליחה למייל) ←</a></p>
+<p><a href="/youtube-download" style="color:#2563eb;text-decoration:none;font-weight:bold">⬇️ הורדת סרטון/אודיו מיוטיוב ←</a></p>
 {% if message %}<div class="msg {{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}
 <form method="post" action="/run" enctype="multipart/form-data">
   <label>קוד גישה</label>
@@ -277,6 +279,129 @@ button:hover{background:#1d4ed8}
 @app.route('/lab', methods=['GET'])
 def form():
     return render_template_string(FORM_HTML, message=None, ok=True, default_email=LAB_DEFAULT_EMAIL)
+
+
+def _download_youtube(url, dest_dir, mode):
+    """מוריד סרטון יוטיוב לתיקיית dest_dir - mode='video' מוריד את הסרטון
+    המלא (mp4, וידאו+אודיו ממוזגים), mode='audio' מוריד רק את פס הקול (mp3).
+    מחזיר (filepath, download_filename, mimetype) או זורק חריגה עם הודעה
+    קריאה אם נכשל (סרטון פרטי/לא קיים וכו') - בלי הגבלת אורך."""
+    import yt_dlp
+
+    token = uuid.uuid4().hex
+    out_template = os.path.join(dest_dir, f"{token}.%(ext)s")
+
+    # רק שולפים מידע (בלי להוריד) כדי לקבל את הכותרת האמיתית לשם הקובץ
+    with yt_dlp.YoutubeDL({'quiet': True, 'noplaylist': True}) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+    title = info.get('title') or 'youtube_video'
+    # ניקוי תווים שאסורים בשם קובץ
+    safe_title = re.sub(r'[\\/:*?"<>|]', '_', title).strip() or 'youtube_video'
+
+    if mode == 'audio':
+        ydl_opts = {
+            'quiet': True,
+            'noplaylist': True,
+            'format': 'bestaudio/best',
+            'outtmpl': out_template,
+            'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}],
+        }
+        final_ext = 'mp3'
+        mimetype = 'audio/mpeg'
+    else:
+        ydl_opts = {
+            'quiet': True,
+            'noplaylist': True,
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'outtmpl': out_template,
+            'merge_output_format': 'mp4',
+        }
+        final_ext = 'mp4'
+        mimetype = 'video/mp4'
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+
+    filepath = os.path.join(dest_dir, f"{token}.{final_ext}")
+    if not os.path.exists(filepath):
+        # לפעמים הפוסט-פרוססור/מיזוג פולט סיומת אחרת - נחפש כל קובץ עם אותו token
+        matches = [f for f in os.listdir(dest_dir) if f.startswith(token)]
+        if not matches:
+            raise ValueError("ההורדה מיוטיוב נכשלה - לא נוצר קובץ")
+        filepath = os.path.join(dest_dir, matches[0])
+        final_ext = matches[0].rsplit('.', 1)[-1]
+
+    return filepath, f"{safe_title}.{final_ext}", mimetype
+
+
+YOUTUBE_HTML = """<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8">
+<title>הורדת יוטיוב - מעבדת בדיקות</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;color:#111}
+label{display:block;margin-top:16px;font-weight:bold;font-size:14px}
+input,select{width:100%;padding:10px;margin-top:4px;box-sizing:border-box;border:1px solid #ccc;border-radius:6px;font-size:15px}
+button{margin-top:22px;padding:12px 28px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer}
+button:hover{background:#1d4ed8}
+.msg{margin-top:20px;padding:14px;border-radius:8px;font-size:14px}
+.err{background:#fef2f2;border:1px solid #ef4444;color:#991b1b}
+.note{color:#6b7280;font-size:13px;margin-top:8px}
+</style></head><body>
+<h2>⬇️ הורדת סרטון/אודיו מיוטיוב</h2>
+<p class="note">מוריד ישירות למחשב שלך - בלי תמלול, בלי מייל, בלי כלום.</p>
+<p><a href="/" style="color:#2563eb;text-decoration:none;font-weight:bold">→ חזרה למעבדה הראשית</a></p>
+{% if error %}<div class="msg err">{{ error }}</div>{% endif %}
+<form method="post" action="/youtube-download">
+  <label>קוד גישה</label>
+  <input type="password" name="access_code" required>
+
+  <label>קישור יוטיוב</label>
+  <input type="url" name="youtube_url" required placeholder="https://www.youtube.com/watch?v=...">
+
+  <label>מה להוריד</label>
+  <select name="mode">
+    <option value="video">🎬 סרטון מלא (mp4)</option>
+    <option value="audio">🎵 אודיו בלבד (mp3)</option>
+  </select>
+
+  <button type="submit">הורד</button>
+</form>
+</body></html>"""
+
+
+@app.route('/youtube-download', methods=['GET'])
+def youtube_download_form():
+    return render_template_string(YOUTUBE_HTML, error=None)
+
+
+@app.route('/youtube-download', methods=['POST'])
+def youtube_download_run():
+    if not LAB_ACCESS_CODE or request.form.get('access_code') != LAB_ACCESS_CODE:
+        return render_template_string(YOUTUBE_HTML, error="קוד גישה שגוי"), 403
+
+    youtube_url = (request.form.get('youtube_url') or '').strip()
+    mode = request.form.get('mode', 'video')
+    if mode not in ('video', 'audio'):
+        mode = 'video'
+    if not youtube_url:
+        return render_template_string(YOUTUBE_HTML, error="יש להדביק קישור יוטיוב"), 400
+
+    try:
+        filepath, download_filename, mimetype = _download_youtube(youtube_url, UPLOAD_DIR, mode)
+    except Exception as e:
+        log.error(f"youtube download error: {e}")
+        return render_template_string(YOUTUBE_HTML, error=f"שגיאה בהורדה מיוטיוב: {e}"), 400
+
+    @after_this_request
+    def _cleanup(response):
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        except Exception:
+            pass
+        return response
+
+    return send_file(filepath, as_attachment=True, download_name=download_filename, mimetype=mimetype)
 
 
 @app.route('/run', methods=['POST'])

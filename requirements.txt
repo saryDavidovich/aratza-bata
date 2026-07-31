@@ -11,3 +11,4 @@ numpy
 Pillow
 pillow-heif
 yt-dlp
+imageio-ffmpeg

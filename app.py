@@ -215,6 +215,7 @@ button:hover{background:#1d4ed8}
 <h2>🧪 מעבדת בדיקות - תמלול וקלדן</h2>
 <p class="note">פרויקט עצמאי לניסויים בלבד. אין לזה שום קשר למערכת הלקוחות הפעילה.</p>
 <p><a href="/imagechat" style="color:#2563eb;text-decoration:none;font-weight:bold">🎨 צ'אט תמונות עם Gemini (יצירת תמונות + שליחה למייל) ←</a></p>
+<p><a href="/videochat" style="color:#2563eb;text-decoration:none;font-weight:bold">🎬 צ'אט סרטונים עם Gemini (יצירת סרטונים + העלאת קבצים + שליחה למייל) ←</a></p>
 <p><a href="/youtube-download" style="color:#2563eb;text-decoration:none;font-weight:bold">⬇️ הורדת סרטון/אודיו מיוטיוב ←</a></p>
 {% if message %}<div class="msg {{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}
 <form method="post" action="/run" enctype="multipart/form-data">
@@ -701,6 +702,20 @@ def imagechat_send():
 @app.route('/imagechat/file/<path:filename>')
 def imagechat_file(filename):
     return send_from_directory(IMAGE_CHAT_DIR, filename)
+
+
+# ============================================================
+# צ'אט יצירת סרטונים (Gemini Omni Flash / Veo 3.1 Lite) - הקוד עצמו ב-videochat.py
+# ============================================================
+from videochat import init_videochat  # noqa: E402
+
+init_videochat(
+    app,
+    require_access=_require_access,
+    normalize_image=_normalize_uploaded_image,
+    default_email=LAB_DEFAULT_EMAIL,
+    app_base_url=APP_BASE_URL,
+)
 
 
 if __name__ == '__main__':

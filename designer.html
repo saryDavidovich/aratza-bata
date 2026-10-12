@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>שולחן עיצוב</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1b2433;
+    --ink-2: #232e40;
+    --ink-3: #2c394f;
+    --line: #36455e;
+    --on-ink: #e6ebf2;
+    --on-ink-muted: #93a1b8;
+    --desk: #c5cbd6;
+    --mark: #f5b700;
+    --mark-ink: #1b2433;
+    --danger: #ff7a6b;
+    --radius: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Assistant", system-ui, sans-serif;
+    background: var(--ink);
+    color: var(--on-ink);
+    font-size: 15px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+
+  /* ---------- top bar ---------- */
+  .bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 14px; background: var(--ink); border-bottom: 1px solid var(--line);
+  }
+  .brand { font-weight: 800; font-size: 19px; margin-left: 14px; letter-spacing: .2px; }
+  .brand small { font-weight: 400; color: var(--on-ink-muted); font-size: 13px; margin-right: 6px; }
+  .bar .spacer { flex: 1; }
+  .btn {
+    background: var(--ink-3); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 6px 12px; color: var(--on-ink); white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--on-ink-muted); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn.primary { background: var(--mark); color: var(--mark-ink); border-color: var(--mark); font-weight: 700; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.on { background: var(--on-ink); color: var(--ink); border-color: var(--on-ink); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .seg button { background: transparent; border: 0; padding: 6px 10px; color: var(--on-ink-muted); }
+  .seg button + button { border-right: 1px solid var(--line); }
+  .seg button.on { background: var(--ink-3); color: var(--on-ink); }
+  .home { color: var(--on-ink-muted); text-decoration: none; font-size: 13px; }
+  .home:hover { color: var(--on-ink); }
+
+  /* ---------- layout ---------- */
+  .work { display: grid; grid-template-columns: 330px 1fr; min-height: 0; }
+  .side {
+    background: var(--ink-2); border-left: 1px solid var(--line);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button {
+    flex: 1; background: transparent; border: 0; padding: 11px 4px; color: var(--on-ink-muted);
+    border-bottom: 3px solid transparent; font-weight: 600;
+  }
+  .tabs button.on { color: var(--on-ink); border-bottom-color: var(--mark); }
+  .panel { overflow-y: auto; padding: 4px 14px 40px; flex: 1; display: none; }
+  .panel.on { display: block; }
+
+  .group { border-bottom: 1px solid var(--line); padding: 14px 0; }
+  .group:last-child { border-bottom: 0; }
+  .group h3 { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
+  .hint { color: var(--on-ink-muted); font-size: 13px; line-height: 1.5; margin: 0 0 10px; }
+  .row { display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .row label { color: var(--on-ink-muted); font-size: 14px; }
+  .row > .ctl { display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .side input[type=text], .side input[type=number], .side select {
+    width: 100%; min-width: 0; background: var(--ink); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 5px 8px;
+  }
+  .side input[type=number] { direction: ltr; text-align: right; }
+  input[type=color] {
+    width: 38px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--ink); cursor: pointer; flex: none;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 3px; }
+  input[type=color]::-webkit-color-swatch { border: 0; border-radius: 3px; }
+  input[type=color].unset { opacity: .3; }
+  .clear {
+    background: transparent; border: 1px solid var(--line); border-radius: var(--radius);
+    color: var(--on-ink-muted); font-size: 12px; padding: 5px 7px; flex: none;
+  }
+  .clear:hover { color: var(--on-ink); }
+  .colorval { font-size: 12px; color: var(--on-ink-muted); direction: ltr; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    background: var(--ink); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 11px; font-size: 13px; color: var(--on-ink);
+  }
+  .chip:hover { border-color: var(--on-ink-muted); }
+  .chip.on { background: var(--mark); color: var(--mark-ink); border-color: var(--mark); font-weight: 700; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .actions .btn { padding: 7px 8px; }
+  .btn.danger { color: var(--danger); }
+
+  /* palette */
+  .palette { display: grid; gap: 6px; }
+  .swatch {
+    display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center;
+    background: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 8px 5px 5px;
+  }
+  .swatch .meta { font-size: 13px; line-height: 1.3; }
+  .swatch .meta b { display: block; direction: ltr; text-align: right; font-weight: 600; }
+  .swatch .meta span { color: var(--on-ink-muted); }
+  .swatch .count { color: var(--on-ink-muted); font-size: 12px; }
+  .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .theme {
+    background: var(--ink); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 8px; text-align: right;
+  }
+  .theme:hover { border-color: var(--on-ink-muted); }
+  .theme .dots { display: flex; gap: 3px; margin-bottom: 5px; }
+  .theme .dots i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2); }
+  .theme span { font-size: 13px; }
+
+  /* selected element header */
+  .sel-head { padding: 14px 0 10px; border-bottom: 1px solid var(--line); }
+  .sel-name { font-size: 18px; font-weight: 800; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .crumbs button {
+    background: transparent; border: 1px solid var(--line); border-radius: 4px;
+    font-size: 12px; padding: 2px 7px; color: var(--on-ink-muted);
+  }
+  .crumbs button:hover { color: var(--on-ink); }
+  .check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 14px; }
+  .empty-sel { color: var(--on-ink-muted); padding: 30px 4px; line-height: 1.6; }
+  .empty-sel b { color: var(--on-ink); }
+
+  /* ---------- stage ---------- */
+  .stage {
+    position: relative; min-height: 0; overflow: auto;
+    background-color: var(--desk);
+    background-image: radial-gradient(rgba(27,36,51,.18) 1px, transparent 1px);
+    background-size: 18px 18px;
+    display: flex; justify-content: center; padding: 22px;
+  }
+  .sheet {
+    width: 100%; height: 100%; min-height: 400px; position: relative;
+    background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 10px 30px rgba(27,36,51,.25);
+    transition: width .25s ease;
+  }
+  .sheet iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  .sheet .orig { display: none; }
+  .sheet.show-orig .orig { display: block; }
+  .tag-orig {
+    position: absolute; top: -12px; right: 14px; z-index: 3; display: none;
+    background: var(--ink); color: var(--mark); font-size: 13px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .sheet.show-orig .tag-orig { display: block; }
+
+  /* load card */
+  .loader {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 22px; background: var(--desk); z-index: 5;
+  }
+  .loader[hidden] { display: none; }
+  .card {
+    width: min(720px, 100%); background: #fff; color: var(--ink); border-radius: 10px;
+    box-shadow: 0 18px 50px rgba(27,36,51,.3); padding: 26px 28px; max-height: 100%; overflow: auto;
+  }
+  .card h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+  .card p { margin: 0 0 14px; color: #4a5568; line-height: 1.6; }
+  .card ol { margin: 0 0 16px; padding-right: 20px; color: #4a5568; line-height: 1.7; }
+  .card kbd { background: #eef1f5; border: 1px solid #d5dbe4; border-radius: 4px; padding: 0 5px; font-family: inherit; font-size: 13px; }
+  .card textarea {
+    width: 100%; height: 220px; resize: vertical; direction: ltr; text-align: left;
+    font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; color: #1b2433;
+    border: 1.5px solid #c9d0db; border-radius: 8px; padding: 10px; background: #fafbfc;
+  }
+  .card textarea:focus { border-color: var(--ink); outline: none; }
+  .card .line { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .card input[type=text] {
+    flex: 1; min-width: 200px; border: 1.5px solid #c9d0db; border-radius: 8px; padding: 8px 10px;
+    direction: ltr; text-align: left; color: #1b2433;
+  }
+  .card .lbl { font-size: 14px; color: #4a5568; width: 100%; margin-top: 4px; }
+  .card .btn { background: #eef1f5; color: var(--ink); border-color: #d5dbe4; }
+  .card .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); padding: 9px 18px; }
+  .card .err { color: #b42318; font-weight: 600; margin-top: 10px; display: none; }
+  .file-btn { position: relative; overflow: hidden; }
+  .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  /* export dialog */
+  dialog {
+    border: 0; border-radius: 10px; padding: 0; width: min(860px, 94vw); max-height: 90vh;
+    box-shadow: 0 24px 70px rgba(0,0,0,.45); color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(15,20,30,.6); }
+  dialog .card { box-shadow: none; width: 100%; }
+  dialog textarea { height: 300px; }
+  .changes { margin: 0 0 14px; padding-right: 20px; color: #4a5568; font-size: 14px; max-height: 140px; overflow: auto; }
+
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--mark); color: var(--mark-ink); font-weight: 700; padding: 9px 18px;
+    border-radius: 999px; opacity: 0; pointer-events: none; transition: .2s; z-index: 50;
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 860px) {
+    body { overflow: auto; grid-template-rows: auto auto; }
+    .work { grid-template-columns: 1fr; }
+    .stage { height: 70vh; order: -1; }
+    .side { border-left: 0; border-top: 1px solid var(--line); }
+    .panel { max-height: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="brand">שולחן עיצוב<small>לעמודים שבנית</small></span>
+  <button class="btn" id="btnLoad">טעינת עמוד אחר</button>
+  <button class="btn" id="btnUndo" disabled title="Ctrl+Z">ביטול</button>
+  <button class="btn" id="btnRedo" disabled title="Ctrl+Y">חזרה</button>
+  <div class="seg" id="devices" aria-label="רוחב תצוגה">
+    <button data-w="100%" class="on">מחשב</button>
+    <button data-w="820px">טאבלט</button>
+    <button data-w="390px">טלפון</button>
+  </div>
+  <button class="btn" id="btnCompare" disabled>לפני / אחרי</button>
+  <span class="spacer"></span>
+  <a class="home" href="/">חזרה למעבדה</a>
+  <button class="btn primary" id="btnExport" disabled>שמירה וקבלת הקוד</button>
+</header>
+
+<div class="work">
+  <aside class="side">
+    <div class="tabs" role="tablist">
+      <button class="on" data-tab="global">כל העמוד</button>
+      <button data-tab="element">רכיב שנבחר</button>
+      <button data-tab="fields">שדות וכפתורים</button>
+    </div>
+
+    <!-- ===== global ===== -->
+    <section class="panel on" id="tab-global">
+      <div class="group">
+        <h3>ערכות צבע מוכנות</h3>
+        <p class="hint">מחליפות את כל הצבעים בעמוד בבת אחת. אפשר לכוונן כל צבע לבד אחר כך.</p>
+        <div class="themes" id="themes"></div>
+      </div>
+      <div class="group">
+        <h3>הצבעים שבעמוד</h3>
+        <p class="hint">כל צבע מופיע פעם אחת. שינוי שלו מחליף אותו בכל מקום בעמוד.</p>
+        <div class="palette" id="palette"></div>
+      </div>
+      <div class="group">
+        <h3>גופנים</h3>
+        <div class="row"><label>טקסט רגיל</label><div class="ctl"><select data-theme="bodyFont" class="fontsel"></select></div></div>
+        <div class="row"><label>כותרות</label><div class="ctl"><select data-theme="headFont" class="fontsel"></select></div></div>
+        <div class="row"><label>עובי כותרות</label><div class="ctl">
+          <select data-theme="headWeight"><option value="">ללא שינוי</option><option value="400">רגיל</option><option value="600">בינוני</option><option value="700">מודגש</option><option value="800">מודגש מאוד</option><option value="900">שחור</option></select>
+        </div></div>
+        <div class="row"><label>מרווח בין שורות</label><div class="ctl">
+          <select data-theme="lineHeight"><option value="">ללא שינוי</option><option value="1.35">צפוף</option><option value="1.6">רגיל</option><option value="1.85">מרווח</option></select>
+        </div></div>
+      </div>
+      <div class="group">
+        <h3>גודל כותרות</h3>
+        <div class="row"><label>כותרת ראשית</label><div class="ctl"><input type="number" min="10" max="120" data-theme="h1Size" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
+        <div class="row"><label>כותרת משנה</label><div class="ctl"><input type="number" min="10" max="100" data-theme="h2Size" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
+        <div class="row"><label>כותרת קטנה</label><div class="ctl"><input type="number" min="10" max="80" data-theme="h3Size" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
+        <div class="row"><label>טקסט רגיל</label><div class="ctl"><input type="number" min="10" max="40" data-theme="bodySize" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
+      </div>
+      <div class="group">
+        <h3>קישורים</h3>
+        <div class="row"><label>צבע קישור</label><div class="ctl"><input type="color" data-theme="linkColor"><button class="clear" data-clear-theme="linkColor">ללא</button></div></div>
+        <div class="row"><label>קו תחתון</label><div class="ctl">
+          <select data-theme="linkUnderline"><option value="">ללא שינוי</option><option value="none">בלי קו</option><option value="underline">עם קו</option></select>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ===== element ===== -->
+    <section class="panel" id="tab-element">
+      <div class="empty-sel" id="noSel">
+        <b>לחץ על כל דבר בעמוד</b> כדי לעצב אותו: כותרת, פסקה, כפתור, קופסה, קו.<br><br>
+        לחיצה כפולה על טקסט מאפשרת לשנות את המילים עצמן.
+      </div>
+      <div id="selPanel" hidden>
+        <div class="sel-head">
+          <div class="sel-name" id="selName"></div>
+          <div class="crumbs" id="crumbs"></div>
+          <label class="check"><input type="checkbox" id="applyAll"> <span id="applyAllLbl">החל על כל הרכיבים הדומים</span></label>
+        </div>
+
+        <div class="group">
+          <h3>טקסט</h3>
+          <div class="row"><label>המילים</label><div class="ctl"><button class="btn" id="btnEditText" style="width:100%">עריכת הטקסט בעמוד</button></div></div>
+          <div class="row"><label>גופן</label><div class="ctl"><select data-prop="font-family" class="fontsel"></select></div></div>
+          <div class="row"><label>גודל</label><div class="ctl"><input type="number" min="6" max="200" data-prop="font-size" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>עובי</label><div class="ctl">
+            <select data-prop="font-weight"><option value="">ללא שינוי</option><option value="300">דק</option><option value="400">רגיל</option><option value="500">בינוני</option><option value="600">חצי מודגש</option><option value="700">מודגש</option><option value="800">מודגש מאוד</option><option value="900">שחור</option></select>
+          </div></div>
+          <div class="row"><label>צבע טקסט</label><div class="ctl"><input type="color" data-prop="color"><span class="colorval"></span><button class="clear" data-clear="color">ללא</button></div></div>
+          <div class="row"><label>יישור</label><div class="ctl chips" data-chips="text-align">
+            <button class="chip" data-v="right">ימין</button><button class="chip" data-v="center">מרכז</button><button class="chip" data-v="left">שמאל</button><button class="chip" data-v="justify">מלא</button>
+          </div></div>
+          <div class="row"><label>בין שורות</label><div class="ctl"><input type="number" min="0.8" max="3" step="0.05" data-prop="line-height"></div></div>
+        </div>
+
+        <div class="group">
+          <h3>רקע, מסגרת וצל</h3>
+          <div class="row"><label>צבע רקע</label><div class="ctl"><input type="color" data-prop="background-color"><span class="colorval"></span><button class="clear" data-clear="background-color" data-to="transparent">שקוף</button></div></div>
+          <div class="row"><label>עובי קו</label><div class="ctl"><input type="number" min="0" max="40" data-prop="border-width" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>סוג קו</label><div class="ctl">
+            <select data-prop="border-style"><option value="">ללא שינוי</option><option value="none">בלי קו</option><option value="solid">רציף</option><option value="dashed">מקווקו</option><option value="dotted">מנוקד</option><option value="double">כפול</option></select>
+          </div></div>
+          <div class="row"><label>צבע קו</label><div class="ctl"><input type="color" data-prop="border-color"><span class="colorval"></span><button class="clear" data-clear="border-color">ללא</button></div></div>
+          <div class="row"><label>עיגול פינות</label><div class="ctl"><input type="number" min="0" max="999" data-prop="border-radius" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>צל</label><div class="ctl">
+            <select data-prop="box-shadow"><option value="">ללא שינוי</option><option value="none">בלי צל</option><option value="0 1px 3px rgba(0,0,0,.12)">עדין</option><option value="0 6px 18px rgba(0,0,0,.14)">בינוני</option><option value="0 16px 40px rgba(0,0,0,.22)">חזק</option><option value="6px 6px 0 rgba(0,0,0,.85)">צל חד</option></select>
+          </div></div>
+        </div>
+
+        <div class="group">
+          <h3>מידות וריווח</h3>
+          <div class="row"><label>ריווח פנימי</label><div class="ctl"><input type="number" min="0" max="300" data-prop="padding" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>רווח מעל</label><div class="ctl"><input type="number" min="-200" max="300" data-prop="margin-top" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>רווח מתחת</label><div class="ctl"><input type="number" min="-200" max="300" data-prop="margin-bottom" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>רוחב</label><div class="ctl"><input type="text" data-prop="width" placeholder="למשל 100% או 400px"></div></div>
+          <div class="row"><label>רוחב מקסימלי</label><div class="ctl"><input type="text" data-prop="max-width" placeholder="למשל 900px"></div></div>
+        </div>
+
+        <div class="group">
+          <h3>מיקום</h3>
+          <div class="actions" style="margin-bottom:10px">
+            <button class="btn" id="btnUp">הזזה למעלה</button>
+            <button class="btn" id="btnDown">הזזה למטה</button>
+          </div>
+          <div class="row"><label>הזזה לצדדים</label><div class="ctl"><input type="number" min="-1000" max="1000" id="nudgeX" placeholder="0"><span class="colorval">px</span></div></div>
+          <div class="row"><label>הזזה למעלה/מטה</label><div class="ctl"><input type="number" min="-1000" max="1000" id="nudgeY" placeholder="0"><span class="colorval">px</span></div></div>
+        </div>
+
+        <div class="group">
+          <h3>פעולות</h3>
+          <div class="actions">
+            <button class="btn" id="btnDup">שכפול</button>
+            <button class="btn" id="btnHr">הוספת קו מתחת</button>
+            <button class="btn" id="btnReset">ניקוי העיצוב שלי</button>
+            <button class="btn" id="btnHide">הסתרה</button>
+            <button class="btn danger" id="btnDelete" style="grid-column:1/-1">מחיקת הרכיב</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== fields & buttons ===== -->
+    <section class="panel" id="tab-fields">
+      <div class="group">
+        <h3>שדות מילוי</h3>
+        <p class="hint">משפיע על כל תיבות הטקסט, הרשימות הנפתחות והשדות הארוכים בעמוד.</p>
+        <div class="row"><label>צורה</label><div class="ctl chips" data-tchips="fieldShape">
+          <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="square">מרובע</button><button class="chip" data-v="rounded">מעוגל</button><button class="chip" data-v="pill">קפסולה</button>
+        </div></div>
+        <div class="row"><label>סגנון</label><div class="ctl chips" data-tchips="fieldStyle">
+          <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="outline">מסגרת</button><button class="chip" data-v="underline">קו תחתון</button><button class="chip" data-v="filled">רקע מלא</button>
+        </div></div>
+        <div class="row"><label>גודל</label><div class="ctl chips" data-tchips="fieldSize">
+          <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="s">קטן</button><button class="chip" data-v="m">בינוני</button><button class="chip" data-v="l">גדול</button>
+        </div></div>
+        <div class="row"><label>צבע מסגרת</label><div class="ctl"><input type="color" data-theme="fieldBorder"><button class="clear" data-clear-theme="fieldBorder">ללא</button></div></div>
+        <div class="row"><label>צבע רקע</label><div class="ctl"><input type="color" data-theme="fieldBg"><button class="clear" data-clear-theme="fieldBg">ללא</button></div></div>
+        <div class="row"><label>צבע בזמן הקלדה</label><div class="ctl"><input type="color" data-theme="focusColor"><button class="clear" data-clear-theme="focusColor">ללא</button></div></div>
+      </div>
+      <div class="group">
+        <h3>כפתורים</h3>
+        <div class="row"><label>צורה</label><div class="ctl chips" data-tchips="btnShape">
+          <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="square">מרובע</button><button class="chip" data-v="rounded">מעוגל</button><button class="chip" data-v="pill">קפסולה</button>
+        </div></div>
+        <div class="row"><label>סגנון</label><div class="ctl chips" data-tchips="btnStyle">
+          <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="solid">מלא</button><button class="chip" data-v="outline">מסגרת</button><button class="chip" data-v="soft">רך</button>
+        </div></div>
+        <div class="row"><label>גודל</label><div class="ctl chips" data-tchips="btnSize">
+          <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="s">קטן</button><button class="chip" data-v="m">בינוני</button><button class="chip" data-v="l">גדול</button>
+        </div></div>
+        <div class="row"><label>צבע הכפתור</label><div class="ctl"><input type="color" data-theme="btnColor"><button class="clear" data-clear-theme="btnColor">ללא</button></div></div>
+        <div class="row"><label>צבע הכיתוב</label><div class="ctl"><input type="color" data-theme="btnText"><button class="clear" data-clear-theme="btnText">ללא</button></div></div>
+        <div class="row"><label>צל</label><div class="ctl chips" data-tchips="btnShadow">
+          <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="none">בלי</button><button class="chip" data-v="soft">עדין</button><button class="chip" data-v="raised">בולט</button>
+        </div></div>
+        <div class="row"><label>עובי כיתוב</label><div class="ctl">
+          <select data-theme="btnWeight"><option value="">ללא שינוי</option><option value="400">רגיל</option><option value="600">חצי מודגש</option><option value="700">מודגש</option><option value="800">מודגש מאוד</option></select>
+        </div></div>
+      </div>
+    </section>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="sheet" id="sheet">
+      <span class="tag-orig">כך זה נראה לפני השינויים</span>
+      <iframe id="frame" title="העמוד בעריכה"></iframe>
+      <iframe id="origFrame" class="orig" title="העמוד המקורי"></iframe>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="card">
+        <h1>הדבקת עמוד לעיצוב</h1>
+        <ol>
+          <li>פתח את העמוד שלך בדפדפן ולחץ <kbd>Ctrl</kbd>+<kbd>U</kbd>.</li>
+          <li>בחלון שנפתח לחץ <kbd>Ctrl</kbd>+<kbd>A</kbd> ואז <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
+          <li>הדבק כאן למטה ולחץ "פתיחה לעריכה".</li>
+        </ol>
+        <textarea id="src" placeholder="<!DOCTYPE html> ..." spellcheck="false"></textarea>
+        <div class="line">
+          <span class="lbl">כתובת האתר (לא חובה - עוזר לתמונות ולקבצי עיצוב להיטען נכון)</span>
+          <input type="text" id="baseUrl" placeholder="https://example.com/">
+        </div>
+        <div class="line">
+          <button class="btn primary" id="btnOpen">פתיחה לעריכה</button>
+          <span class="btn file-btn">או בחירת קובץ מהמחשב<input type="file" id="fileIn" accept=".html,.htm,text/html"></span>
+          <button class="btn" id="btnResume" hidden>המשך מהפעם הקודמת</button>
+          <button class="btn" id="btnCancelLoad" hidden>ביטול</button>
+        </div>
+        <div class="err" id="loadErr"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<dialog id="exportDlg">
+  <div class="card">
+    <h1>הקוד החדש של העמוד</h1>
+    <p>זה העמוד המלא עם כל השינויים. אפשר להעתיק אותו או להוריד כקובץ.</p>
+    <p id="changesTitle" style="margin-bottom:4px;font-weight:700;color:#1b2433">מה שונה:</p>
+    <ul class="changes" id="changes"></ul>
+    <textarea id="outCode" readonly spellcheck="false"></textarea>
+    <div class="line">
+      <button class="btn primary" id="btnCopy">העתקת הקוד</button>
+      <button class="btn" id="btnDownload">הורדה כקובץ</button>
+      <button class="btn" id="btnCloseDlg">חזרה לעריכה</button>
+    </div>
+    <p style="margin-top:14px;font-size:14px">אם העמוד המקורי מציג תוכן שמשתנה (רשימות, הודעות, נתונים מהשרת) - כדאי לא להחליף אותו ישירות בקוד הזה, אלא להעביר את הקוד ואת רשימת השינויים למי שמתחזק את האתר, כדי שישלב את העיצוב במקור.</p>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// ------------------------------------------------------------------
+// state
+// ------------------------------------------------------------------
+const frame = $('#frame');
+const origFrame = $('#origFrame');
+let doc = null;            // live iframe document
+let original = '';         // html exactly as pasted
+let doctype = '<!DOCTYPE html>';
+let baseUrl = '';
+let selected = null;
+let undoStack = [], redoStack = [];
+let lastPush = { label: '', at: 0 };
+let changes = [];
+let theme = {};
+let saveTimer = null;
+const STORE_KEY = 'design-desk-work';
+
+const FONTS = [
+  ['', 'ללא שינוי'],
+  ['Heebo', 'Heebo'], ['Assistant', 'Assistant'], ['Rubik', 'Rubik'], ['Alef', 'Alef'],
+  ['Varela Round', 'Varela Round'], ['Noto Sans Hebrew', 'Noto Sans Hebrew'], ['IBM Plex Sans Hebrew', 'IBM Plex Sans Hebrew'],
+  ['Secular One', 'Secular One'], ['Suez One', 'Suez One'], ['Frank Ruhl Libre', 'Frank Ruhl Libre'],
+  ['David Libre', 'David Libre'], ['Noto Serif Hebrew', 'Noto Serif Hebrew'], ['Bellefair', 'Bellefair'],
+  ['Amatic SC', 'Amatic SC'], ['Karantina', 'Karantina'], ['Arial', 'Arial (מובנה)'], ['Tahoma', 'Tahoma (מובנה)']
+];
+const SYSTEM_FONTS = ['Arial', 'Tahoma'];
+
+const THEMES = [
+  { name: 'ים תיכון',  bg: '#f4f8fa', surface: '#ffffff', text: '#12304a', muted: '#5b7083', accent: '#0e7c86', accent2: '#f2a541' },
+  { name: 'יער',       bg: '#f2f4ee', surface: '#ffffff', text: '#1f2d1f', muted: '#5f6f5a', accent: '#2f6b3a', accent2: '#b5832a' },
+  { name: 'לילה',      bg: '#0f1b2d', surface: '#172a45', text: '#e8eef6', muted: '#9fb0c6', accent: '#5aa9ff', accent2: '#ffd166' },
+  { name: 'זהב וכחול', bg: '#fbfaf6', surface: '#ffffff', text: '#1d2a3a', muted: '#6a7480', accent: '#1f5f99', accent2: '#c99a2e' },
+  { name: 'שחור לבן',  bg: '#ffffff', surface: '#f2f2f2', text: '#000000', muted: '#555555', accent: '#111111', accent2: '#c8102e' },
+  { name: 'ענבים',     bg: '#f6f4fb', surface: '#ffffff', text: '#251b3d', muted: '#6d6585', accent: '#5b3fa8', accent2: '#e07a2f' },
+  { name: 'אדמה',      bg: '#f5f1ec', surface: '#fffdfa', text: '#2e2620', muted: '#7a6c60', accent: '#7b4b2a', accent2: '#3f7d6e' },
+  { name: 'תכלת שמיים', bg: '#eef6fc', surface: '#ffffff', text: '#0b2540', muted: '#56708a', accent: '#1b8ad6', accent2: '#ef6f5e' }
+];
+
+const NAMES = {
+  body: 'כל העמוד', main: 'תוכן ראשי', header: 'ראש העמוד', footer: 'תחתית העמוד', nav: 'תפריט',
+  section: 'אזור', article: 'כתבה', aside: 'עמודת צד', div: 'קופסה', span: 'קטע טקסט',
+  h1: 'כותרת ראשית', h2: 'כותרת משנה', h3: 'כותרת קטנה', h4: 'כותרת', h5: 'כותרת', h6: 'כותרת',
+  p: 'פסקה', a: 'קישור', button: 'כפתור', input: 'שדה מילוי', textarea: 'שדה טקסט ארוך',
+  select: 'רשימה נפתחת', option: 'אפשרות', label: 'תווית של שדה', form: 'טופס', img: 'תמונה',
+  ul: 'רשימה', ol: 'רשימה ממוספרת', li: 'פריט ברשימה', table: 'טבלה', tr: 'שורה בטבלה',
+  td: 'תא בטבלה', th: 'כותרת בטבלה', hr: 'קו מפריד', strong: 'טקסט מודגש', b: 'טקסט מודגש',
+  em: 'טקסט נטוי', i: 'טקסט נטוי', small: 'טקסט קטן', blockquote: 'ציטוט', pre: 'קוד',
+  code: 'קוד', svg: 'איור', video: 'סרטון', iframe: 'חלון מוטמע', fieldset: 'קבוצת שדות', legend: 'כותרת קבוצה'
+};
+
+// ------------------------------------------------------------------
+// color helpers
+// ------------------------------------------------------------------
+const COLOR_PROPS = /^(--|color$|background|border|outline|fill|stroke|box-shadow|text-shadow|caret-color|accent-color|text-decoration|column-rule|stop-color|flood-color|lighting-color)/i;
+const COLOR_TOKEN = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])|rgba?\(\s*[\d.]+%?\s*,?\s*[\d.]+%?\s*,?\s*[\d.]+%?\s*(?:[,\/]\s*[\d.]+%?\s*)?\)|\b(?:white|black)\b(?!-)/gi;
+const DECL = /([-\w]+)(\s*:)([^;{}]+)(?=[;}])/g;
+
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+function hex2(n) { return clamp(Math.round(n), 0, 255).toString(16).padStart(2, '0'); }
+function parseColor(tok) {
+  const t = tok.trim().toLowerCase();
+  if (t === 'white') return { r: 255, g: 255, b: 255, a: 1 };
+  if (t === 'black') return { r: 0, g: 0, b: 0, a: 1 };
+  if (t[0] === '#') {
+    let h = t.slice(1);
+    if (h.length <= 4) h = [...h].map(c => c + c).join('');
+    return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16),
+             a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1 };
+  }
+  const nums = t.replace(/rgba?\(|\)/g, '').split(/[\s,\/]+/).filter(Boolean);
+  const ch = v => v.endsWith('%') ? parseFloat(v) * 2.55 : parseFloat(v);
+  let a = 1;
+  if (nums[3] !== undefined) a = nums[3].endsWith('%') ? parseFloat(nums[3]) / 100 : parseFloat(nums[3]);
+  return { r: ch(nums[0]), g: ch(nums[1]), b: ch(nums[2]), a };
+}
+function toHex(c) { return '#' + hex2(c.r) + hex2(c.g) + hex2(c.b); }
+function fromHex(h) { return parseColor(h); }
+function formatColor(c) {
+  if (c.a >= 0.999) return toHex(c);
+  return `rgba(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)}, ${+c.a.toFixed(3)})`;
+}
+function cssColorToHex(v) {           // computed style -> #rrggbb or '' if transparent
+  if (!v) return '';
+  const m = v.match(/rgba?\(([^)]+)\)/);
+  if (!m) return '';
+  const c = parseColor(v);
+  if (c.a === 0) return '';
+  return toHex(c);
+}
+function hsl({ r, g, b }) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  const l = (mx + mn) / 2;
+  let s = 0;
+  if (mx !== mn) s = l > .5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn);
+  return { s, l };
+}
+
+// apply fn(colorToken)->newToken to every color in css text (declarations only)
+function mapCssColors(text, fn) {
+  return text.replace(DECL, (all, prop, colon, val) => {
+    if (!COLOR_PROPS.test(prop)) return all;
+    return prop + colon + val.replace(COLOR_TOKEN, tok => fn(tok));
+  });
+}
+function mapStyleAttr(text, fn) {
+  const t = text.trim();
+  const out = mapCssColors(t.endsWith(';') ? t : t + ';', fn);
+  return t.endsWith(';') ? out : out.replace(/;$/, '');
+}
+// visit every color-bearing text source in the document
+function colorSources() {
+  const list = [];
+  $$('style', doc).forEach(s => {
+    if (s.id === 'dz-theme' || s.hasAttribute('data-dz-editor')) return;
+    list.push({ get: () => s.textContent, set: v => { s.textContent = v; }, css: true });
+  });
+  $$('[style]', doc).forEach(el => {
+    list.push({ get: () => el.getAttribute('style'), set: v => el.setAttribute('style', v), css: false });
+  });
+  $$('[fill],[stroke],[bgcolor],font[color]', doc).forEach(el => {
+    ['fill', 'stroke', 'bgcolor', 'color'].forEach(a => {
+      if (!el.hasAttribute(a)) return;
+      if (a === 'color' && el.tagName !== 'FONT') return;
+      list.push({ get: () => a + ':' + el.getAttribute(a) + ';', set: v => el.setAttribute(a, v.replace(/^[^:]+:/, '').replace(/;$/, '')), css: true, attr: true });
+    });
+  });
+  return list;
+}
+function scanColors() {
+  const map = new Map();
+  colorSources().forEach(src => {
+    const fn = tok => {
+      const c = parseColor(tok);
+      if (isNaN(c.r)) return tok;
+      const k = toHex(c);
+      const e = map.get(k) || { hex: k, count: 0, c };
+      e.count++; map.set(k, e);
+      return tok;
+    };
+    src.css ? mapCssColors(src.get(), fn) : mapStyleAttr(src.get(), fn);
+  });
+  return [...map.values()].sort((a, b) => b.count - a.count);
+}
+function replaceColors(mapping) {   // mapping: {oldHex: newHex}
+  colorSources().forEach(src => {
+    const fn = tok => {
+      const c = parseColor(tok);
+      if (isNaN(c.r)) return tok;
+      const to = mapping[toHex(c)];
+      if (!to) return tok;
+      const n = fromHex(to); n.a = c.a;
+      return formatColor(n);
+    };
+    const before = src.get();
+    const after = src.css ? mapCssColors(before, fn) : mapStyleAttr(before, fn);
+    if (after !== before) src.set(after);
+  });
+}
+
+// ------------------------------------------------------------------
+// loading & serialising
+// ------------------------------------------------------------------
+function prepare(html) {
+  const d = new DOMParser().parseFromString(html, 'text/html');
+  if (d.doctype) {
+    const dt = d.doctype;
+    doctype = '<!DOCTYPE ' + dt.name + (dt.publicId ? ` PUBLIC "${dt.publicId}"` : '') +
+              (dt.systemId ? ` "${dt.systemId}"` : '') + '>';
+  } else doctype = '';
+  // scripts stay in the code but do not run inside the editor
+  $$('script', d).forEach(s => {
+    if (s.hasAttribute('data-dz-type')) return;
+    s.setAttribute('data-dz-type', s.hasAttribute('type') ? s.getAttribute('type') : '__none');
+    s.setAttribute('type', 'text/dz-inert');
+  });
+  $$('*', d).forEach(el => {
+    [...el.attributes].forEach(a => {
+      if (/^on/i.test(a.name)) { el.setAttribute('data-dz-' + a.name, a.value); el.removeAttribute(a.name); }
+    });
+  });
+  $$('meta[http-equiv]', d).forEach(m => {
+    if (/refresh/i.test(m.getAttribute('http-equiv'))) {
+      m.setAttribute('data-dz-http-equiv', m.getAttribute('http-equiv')); m.removeAttribute('http-equiv');
+    }
+  });
+  $$('[data-dz-editor]', d).forEach(e => e.remove());
+  const head = d.head;
+  if (baseUrl) {
+    const b = d.createElement('base');
+    b.setAttribute('href', baseUrl); b.setAttribute('data-dz-editor', '');
+    head.insertBefore(b, head.firstChild);
+  }
+  const st = d.createElement('style');
+  st.setAttribute('data-dz-editor', '');
+  st.textContent = `
+    [data-dz-hover]{outline:2px dashed #f5b700 !important;outline-offset:1px !important;cursor:pointer !important}
+    [data-dz-sel]{outline:3px solid #f5b700 !important;outline-offset:2px !important}
+    [data-dz-edit]{outline:3px solid #2f80ed !important;cursor:text !important}
+    a,button,input,select,textarea,label{cursor:pointer !important}`;
+  head.appendChild(st);
+  return doctype + '\n' + d.documentElement.outerHTML;
+}
+
+function serialize(forExport) {
+  if (!doc) return '';
+  const root = doc.documentElement.cloneNode(true);
+  $$('[data-dz-sel],[data-dz-hover]', root).forEach(e => { e.removeAttribute('data-dz-sel'); e.removeAttribute('data-dz-hover'); });
+  $$('[data-dz-edit]', root).forEach(e => { e.removeAttribute('data-dz-edit'); e.removeAttribute('contenteditable'); });
+  if (forExport) {
+    $$('[data-dz-editor]', root).forEach(e => e.remove());
+    $$('script[data-dz-type]', root).forEach(s => {
+      const t = s.getAttribute('data-dz-type');
+      s.removeAttribute('data-dz-type');
+      if (t === '__none') s.removeAttribute('type'); else s.setAttribute('type', t);
+    });
+    $$('*', root).forEach(el => {
+      [...el.attributes].forEach(a => {
+        if (a.name.startsWith('data-dz-on')) { el.setAttribute(a.name.slice(8), a.value); el.removeAttribute(a.name); }
+      });
+    });
+    $$('[data-dz-http-equiv]', root).forEach(m => {
+      m.setAttribute('http-equiv', m.getAttribute('data-dz-http-equiv')); m.removeAttribute('data-dz-http-equiv');
+    });
+    $$('[style=""]', root).forEach(e => e.removeAttribute('style'));
+    const th = $('#dz-theme', root);
+    if (th && !th.textContent.trim()) th.remove();
+  }
+  return (doctype ? doctype + '\n' : '') + root.outerHTML;
+}
+
+function render(html, keepSelectionPath) {
+  return new Promise(resolve => {
+    frame.onload = () => {
+      doc = frame.contentDocument;
+      wireDoc();
+      readThemeFromDoc();
+      refreshGlobalUI();
+      if (keepSelectionPath) {
+        const el = elementFromPath(keepSelectionPath);
+        el ? select(el, true) : clearSelection();
+      } else clearSelection();
+      resolve();
+    };
+    frame.srcdoc = html;
+  });
+}
+
+async function openPage(html) {
+  const err = $('#loadErr');
+  err.style.display = 'none';
+  if (!html || !/<[a-z!]/i.test(html)) {
+    err.textContent = 'לא נמצא קוד של עמוד. ודא שהעתקת את כל התוכן מחלון Ctrl+U.';
+    err.style.display = 'block';
+    return;
+  }
+  original = html;
+  baseUrl = $('#baseUrl').value.trim();
+  undoStack = []; redoStack = []; changes = [];
+  const prepared = prepare(html);
+  origFrame.srcdoc = prepared;
+  await render(prepared);
+  $('#loader').hidden = true;
+  ['#btnExport', '#btnCompare'].forEach(s => $(s).disabled = false);
+  updateUndoButtons();
+  autosave();
+}
+
+// ------------------------------------------------------------------
+// history
+// ------------------------------------------------------------------
+function pathOf(el) {
+  const path = [];
+  while (el && el !== doc.documentElement) {
+    const p = el.parentElement;
+    path.unshift([...p.children].indexOf(el));
+    el = p;
+  }
+  return path;
+}
+function elementFromPath(path) {
+  let el = doc.documentElement;
+  for (const i of path) { el = el && el.children[i]; }
+  return el || null;
+}
+// call before changing anything; groups rapid edits of the same control
+function checkpoint(label) {
+  const now = Date.now();
+  if (label && lastPush.label === label && now - lastPush.at < 1200) { lastPush.at = now; return; }
+  undoStack.push(serialize(false));
+  if (undoStack.length > 80) undoStack.shift();
+  redoStack = [];
+  lastPush = { label, at: now };
+  if (label) {
+    const target = selected ? ` (${nameOf(selected)})` : '';
+    const line = label + target;
+    if (changes[changes.length - 1] !== line) changes.push(line);
+  }
+  updateUndoButtons();
+}
+function changed() { scheduleSave(); }
+async function undo() {
+  if (!undoStack.length) return;
+  const path = selected ? pathOf(selected) : null;
+  redoStack.push(serialize(false));
+  await render(undoStack.pop(), path);
+  lastPush = { label: '', at: 0 };
+  updateUndoButtons(); scheduleSave();
+}
+async function redo() {
+  if (!redoStack.length) return;
+  const path = selected ? pathOf(selected) : null;
+  undoStack.push(serialize(false));
+  await render(redoStack.pop(), path);
+  lastPush = { label: '', at: 0 };
+  updateUndoButtons(); scheduleSave();
+}
+function updateUndoButtons() {
+  $('#btnUndo').disabled = !undoStack.length;
+  $('#btnRedo').disabled = !redoStack.length;
+}
+
+// ------------------------------------------------------------------
+// autosave (this browser only)
+// ------------------------------------------------------------------
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(autosave, 800); }
+function autosave() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ original, current: serialize(false), baseUrl, doctype, changes, at: Date.now() }));
+  } catch (e) { /* storage full or blocked - editing still works */ }
+}
+function loadSaved() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { return null; }
+}
+
+// ------------------------------------------------------------------
+// iframe interaction
+// ------------------------------------------------------------------
+let hovered = null;
+function wireDoc() {
+  doc.addEventListener('mouseover', e => {
+    const t = e.target;
+    if (hovered && hovered !== t) hovered.removeAttribute('data-dz-hover');
+    if (t.nodeType === 1 && t !== doc.documentElement && !t.hasAttribute('data-dz-edit')) {
+      t.setAttribute('data-dz-hover', ''); hovered = t;
+    }
+  });
+  doc.addEventListener('mouseout', e => { if (e.target.removeAttribute) e.target.removeAttribute('data-dz-hover'); });
+  doc.addEventListener('click', e => {
+    const t = e.target;
+    const editing = t.closest && t.closest('[data-dz-edit]');
+    if (editing) return;                 // typing inside text being edited
+    e.preventDefault(); e.stopPropagation();
+    finishTextEdit();
+    if (t === doc.documentElement) return;
+    select(t);
+  }, true);
+  doc.addEventListener('dblclick', e => {
+    e.preventDefault();
+    const t = e.target;
+    if (t.nodeType === 1 && t !== doc.documentElement && t !== doc.body) { select(t); startTextEdit(); }
+  }, true);
+  doc.addEventListener('submit', e => e.preventDefault(), true);
+  doc.addEventListener('keydown', e => {
+    if (e.key === 'Escape') finishTextEdit();
+    handleShortcuts(e);
+  });
+}
+
+function nameOf(el) {
+  if (!el) return '';
+  const t = el.tagName.toLowerCase();
+  if (t === 'input') {
+    const ty = (el.getAttribute('type') || 'text').toLowerCase();
+    if (['submit', 'button', 'reset'].includes(ty)) return 'כפתור';
+    if (ty === 'checkbox') return 'תיבת סימון';
+    if (ty === 'radio') return 'כפתור בחירה';
+  }
+  if (t === 'a' && /btn|button/i.test(el.className)) return 'כפתור (קישור)';
+  return NAMES[t] || 'רכיב';
+}
+
+function similarOf(el) {
+  if (!el || el === doc.body) return [el];
+  const cls = el.getAttribute('class') || '';
+  return $$(el.tagName, doc).filter(o => (o.getAttribute('class') || '') === cls);
+}
+function targets() {
+  if (!selected) return [];
+  return $('#applyAll').checked ? similarOf(selected) : [selected];
+}
+
+function clearSelection() {
+  if (selected) selected.removeAttribute('data-dz-sel');
+  selected = null;
+  $('#selPanel').hidden = true;
+  $('#noSel').hidden = false;
+}
+function select(el, quiet) {
+  finishTextEdit();
+  if (selected) selected.removeAttribute('data-dz-sel');
+  selected = el;
+  el.setAttribute('data-dz-sel', '');
+  el.removeAttribute('data-dz-hover');
+  $('#applyAll').checked = false;
+  fillElementPanel();
+  if (!quiet) showTab('element');
+}
+
+function fillElementPanel() {
+  const el = selected;
+  $('#noSel').hidden = true;
+  $('#selPanel').hidden = false;
+  $('#selName').textContent = nameOf(el);
+  // breadcrumbs: up to 4 ancestors
+  const crumbs = $('#crumbs'); crumbs.innerHTML = '';
+  let p = el.parentElement, list = [];
+  while (p && p !== doc.documentElement && list.length < 4) { list.push(p); p = p.parentElement; }
+  list.reverse().forEach(a => {
+    const b = document.createElement('button');
+    b.textContent = nameOf(a);
+    b.title = 'בחירת הרכיב העוטף';
+    b.onclick = () => select(a, true);
+    crumbs.appendChild(b);
+  });
+  const sim = similarOf(el).length;
+  $('#applyAllLbl').textContent = sim > 1 ? `החל על כל הרכיבים הדומים (${sim})` : 'אין רכיבים דומים נוספים';
+  $('#applyAll').disabled = sim <= 1;
+
+  const cs = doc.defaultView.getComputedStyle(el);
+  $$('#tab-element [data-prop]').forEach(inp => {
+    const prop = inp.dataset.prop;
+    const inline = el.style.getPropertyValue(prop);
+    let v = inline || cs.getPropertyValue(prop);
+    if (inp.type === 'color') {
+      const hx = cssColorToHex(prop === 'border-color' ? cs.borderTopColor : v);
+      inp.value = hx || '#ffffff';
+      inp.nextElementSibling.textContent = hx || 'שקוף';
+    } else if (inp.type === 'number') {
+      if (prop === 'border-width') v = cs.borderTopWidth;
+      if (prop === 'border-radius') v = cs.borderTopLeftRadius;
+      if (prop === 'padding') v = cs.paddingTop;
+      if (prop === 'line-height') {
+        const lh = parseFloat(cs.lineHeight), fs = parseFloat(cs.fontSize);
+        inp.value = isNaN(lh) ? '' : (lh / fs).toFixed(2);
+        return;
+      }
+      const n = parseFloat(v);
+      inp.value = isNaN(n) ? '' : Math.round(n * 10) / 10;
+    } else if (inp.tagName === 'SELECT') {
+      if (prop === 'font-family') {
+        const first = (inline || '').split(',')[0].replace(/["']/g, '').trim();
+        inp.value = FONTS.some(f => f[0] === first) ? first : '';
+      } else if (prop === 'border-style') {
+        inp.value = inline || '';
+      } else {
+        inp.value = [...inp.options].some(o => o.value === inline) ? inline : '';
+      }
+    } else {
+      inp.value = inline || '';
+    }
+  });
+  const align = el.style.getPropertyValue('text-align') || cs.textAlign;
+  $$('[data-chips="text-align"] .chip').forEach(c => {
+    const v = align === 'start' ? 'right' : align === 'end' ? 'left' : align;
+    c.classList.toggle('on', c.dataset.v === v);
+  });
+  const tr = (el.style.getPropertyValue('translate') || '').split(/\s+/);
+  $('#nudgeX').value = tr[0] ? parseFloat(tr[0]) || '' : '';
+  $('#nudgeY').value = tr[1] ? parseFloat(tr[1]) || '' : '';
+  $('#btnHide').textContent = el.style.getPropertyValue('display') === 'none' ? 'ביטול הסתרה' : 'הסתרה';
+}
+
+function setStyle(el, prop, value) {
+  if (value === '' || value == null) el.style.removeProperty(prop);
+  else el.style.setProperty(prop, value, 'important');
+  if (!el.getAttribute('style')) el.removeAttribute('style');
+}
+
+// ------------------------------------------------------------------
+// text editing
+// ------------------------------------------------------------------
+let editBefore = '';
+function startTextEdit() {
+  if (!selected || selected === doc.body) return;
+  if (/^(INPUT|SELECT|TEXTAREA|IMG|HR|SVG|VIDEO|IFRAME)$/i.test(selected.tagName)) {
+    toast('לרכיב הזה אין טקסט לעריכה'); return;
+  }
+  checkpoint('');
+  editBefore = selected.innerHTML;
+  selected.setAttribute('contenteditable', 'true');
+  selected.setAttribute('data-dz-edit', '');
+  selected.focus();
+  toast('מקליד בעמוד. לסיום: Esc או לחיצה במקום אחר');
+}
+function finishTextEdit() {
+  if (!doc) return;
+  const ed = $('[data-dz-edit]', doc);
+  if (!ed) return;
+  ed.removeAttribute('contenteditable');
+  ed.removeAttribute('data-dz-edit');
+  if (ed.innerHTML !== editBefore) {
+    changes.push('שינוי טקסט (' + nameOf(ed) + ')');
+    changed();
+  } else {
+    undoStack.pop(); updateUndoButtons();
+  }
+}
+
+// ------------------------------------------------------------------
+// element panel events
+// ------------------------------------------------------------------
+const PROP_LABELS = {
+  'font-family': 'גופן', 'font-size': 'גודל טקסט', 'font-weight': 'עובי טקסט', color: 'צבע טקסט',
+  'line-height': 'מרווח שורות', 'background-color': 'צבע רקע', 'border-width': 'עובי מסגרת',
+  'border-style': 'סוג מסגרת', 'border-color': 'צבע מסגרת', 'border-radius': 'עיגול פינות',
+  'box-shadow': 'צל', padding: 'ריווח פנימי', 'margin-top': 'רווח מעל', 'margin-bottom': 'רווח מתחת',
+  width: 'רוחב', 'max-width': 'רוחב מקסימלי', 'text-align': 'יישור טקסט'
+};
+function elementPropChange(inp) {
+  if (!selected) return;
+  const prop = inp.dataset.prop;
+  let v = inp.value.trim();
+  if (v !== '' && inp.dataset.unit) v = v + inp.dataset.unit;
+  if (prop === 'font-family' && v) { ensureFont(v); v = `"${v}", sans-serif`; }
+  checkpoint(PROP_LABELS[prop] || prop);
+  targets().forEach(el => {
+    setStyle(el, prop, v);
+    if (prop === 'border-width' && v && !el.style.getPropertyValue('border-style')) {
+      const cs = doc.defaultView.getComputedStyle(el);
+      if (cs.borderTopStyle === 'none') setStyle(el, 'border-style', 'solid');
+    }
+  });
+  if (prop === 'font-family') writeTheme();   // loads the chosen font into the page
+  if (inp.type === 'color') inp.nextElementSibling.textContent = inp.value;
+  changed();
+}
+$$('#tab-element [data-prop]').forEach(inp => {
+  inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => elementPropChange(inp));
+});
+$$('#tab-element [data-clear]').forEach(b => b.addEventListener('click', () => {
+  if (!selected) return;
+  const prop = b.dataset.clear;
+  checkpoint(PROP_LABELS[prop]);
+  targets().forEach(el => setStyle(el, prop, b.dataset.to || ''));
+  fillElementPanel(); changed();
+}));
+$$('[data-chips="text-align"] .chip').forEach(c => c.addEventListener('click', () => {
+  if (!selected) return;
+  checkpoint('יישור טקסט');
+  targets().forEach(el => setStyle(el, 'text-align', c.dataset.v));
+  fillElementPanel(); changed();
+}));
+// sideways: positive number = toward the left of the screen (reading direction in Hebrew)
+function nudge() {
+  if (!selected) return;
+  const x = parseFloat($('#nudgeX').value) || 0, y = parseFloat($('#nudgeY').value) || 0;
+  checkpoint('הזזה');
+  targets().forEach(el => setStyle(el, 'translate', x || y ? `${-x}px ${y}px` : ''));
+  changed();
+}
+$('#nudgeX').addEventListener('input', nudge);
+$('#nudgeY').addEventListener('input', nudge);
+
+$('#btnEditText').onclick = startTextEdit;
+$('#btnUp').onclick = () => {
+  if (!selected || !selected.previousElementSibling) return toast('זה כבר הרכיב הראשון במקום הזה');
+  checkpoint('הזזת מיקום');
+  selected.parentElement.insertBefore(selected, selected.previousElementSibling);
+  changed();
+};
+$('#btnDown').onclick = () => {
+  if (!selected || !selected.nextElementSibling) return toast('זה כבר הרכיב האחרון במקום הזה');
+  checkpoint('הזזת מיקום');
+  selected.parentElement.insertBefore(selected.nextElementSibling, selected);
+  changed();
+};
+$('#btnDup').onclick = () => {
+  if (!selected || selected === doc.body) return;
+  checkpoint('שכפול');
+  const c = selected.cloneNode(true);
+  c.removeAttribute('data-dz-sel');
+  if (c.id) c.removeAttribute('id');
+  selected.after(c);
+  select(c, true); changed();
+};
+$('#btnHr').onclick = () => {
+  if (!selected || selected === doc.body) return;
+  checkpoint('הוספת קו מפריד');
+  const hr = doc.createElement('hr');
+  hr.setAttribute('style', 'border: 0 !important; border-top: 1px solid #d0d5dd !important; margin: 24px 0 !important;');
+  selected.after(hr);
+  select(hr, true); changed();
+};
+$('#btnReset').onclick = () => {
+  if (!selected) return;
+  checkpoint('ניקוי עיצוב');
+  targets().forEach(el => {
+    [...el.style].filter(p => el.style.getPropertyPriority(p) === 'important').forEach(p => el.style.removeProperty(p));
+    if (!el.getAttribute('style')) el.removeAttribute('style');
+  });
+  fillElementPanel(); changed();
+};
+$('#btnHide').onclick = () => {
+  if (!selected || selected === doc.body) return;
+  const hidden = selected.style.getPropertyValue('display') === 'none';
+  checkpoint(hidden ? 'ביטול הסתרה' : 'הסתרה');
+  targets().forEach(el => setStyle(el, 'display', hidden ? '' : 'none'));
+  fillElementPanel(); changed();
+};
+$('#btnDelete').onclick = () => {
+  if (!selected || selected === doc.body) return;
+  checkpoint('מחיקה');
+  const n = targets();
+  n.forEach(el => el.remove());
+  selected = null; clearSelection(); changed();
+  toast(n.length > 1 ? `נמחקו ${n.length} רכיבים. אפשר לבטל עם "ביטול"` : 'נמחק. אפשר לבטל עם "ביטול"');
+};
+
+// ------------------------------------------------------------------
+// global theme (fonts, headings, links, fields, buttons)
+// ------------------------------------------------------------------
+function ensureFont(name) {
+  if (!name || SYSTEM_FONTS.includes(name) || !doc) return;
+  if (!theme.extraFonts) theme.extraFonts = [];
+  if (!theme.extraFonts.includes(name)) theme.extraFonts.push(name);
+}
+function usedFonts() {
+  const s = new Set(theme.extraFonts || []);
+  [theme.bodyFont, theme.headFont].forEach(f => f && s.add(f));
+  // keep only fonts still in use
+  const inline = $$('[style]', doc).map(el => el.getAttribute('style')).join(' ');
+  return [...s].filter(f => !SYSTEM_FONTS.includes(f) &&
+    (f === theme.bodyFont || f === theme.headFont || inline.includes(`"${f}"`)));
+}
+function themeCss() {
+  const t = theme, r = [];
+  const imp = ' !important';
+  const fam = f => `"${f}", sans-serif${imp}`;
+  if (t.bodyFont) r.push(`body, body p, body li, body td, body th, body label, body input, body select, body textarea, body button, body a, body span, body div { font-family: ${fam(t.bodyFont)}; }`);
+  const H = 'h1, h2, h3, h4, h5, h6';
+  if (t.headFont) r.push(`${H} { font-family: ${fam(t.headFont)}; }`);
+  if (t.headWeight) r.push(`${H} { font-weight: ${t.headWeight}${imp}; }`);
+  if (t.lineHeight) r.push(`body, body p, body li { line-height: ${t.lineHeight}${imp}; }`);
+  if (t.bodySize) r.push(`body, body p, body li, body td { font-size: ${t.bodySize}px${imp}; }`);
+  if (t.h1Size) r.push(`h1 { font-size: ${t.h1Size}px${imp}; }`);
+  if (t.h2Size) r.push(`h2 { font-size: ${t.h2Size}px${imp}; }`);
+  if (t.h3Size) r.push(`h3 { font-size: ${t.h3Size}px${imp}; }`);
+  if (t.linkColor) r.push(`a:not(.btn):not(.button) { color: ${t.linkColor}${imp}; }`);
+  if (t.linkUnderline) r.push(`a:not(.btn):not(.button) { text-decoration: ${t.linkUnderline}${imp}; }`);
+
+  const F = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=file]):not([type=image]), select, textarea';
+  const f = [];
+  const radius = { square: '0', rounded: '8px', pill: '999px' };
+  if (t.fieldShape) f.push(`border-radius: ${radius[t.fieldShape]}${imp}`);
+  const bc = t.fieldBorder || '#9aa4b2';
+  if (t.fieldStyle === 'outline') f.push(`border: 1.5px solid ${bc}${imp}`, `background-color: ${t.fieldBg || '#ffffff'}${imp}`);
+  if (t.fieldStyle === 'underline') f.push(`border: 0${imp}`, `border-bottom: 2px solid ${bc}${imp}`, `border-radius: 0${imp}`, `background-color: ${t.fieldBg || 'transparent'}${imp}`);
+  if (t.fieldStyle === 'filled') f.push(`border: 1.5px solid transparent${imp}`, `background-color: ${t.fieldBg || '#eef1f5'}${imp}`);
+  if (!t.fieldStyle && t.fieldBorder) f.push(`border-color: ${t.fieldBorder}${imp}`);
+  if (!t.fieldStyle && t.fieldBg) f.push(`background-color: ${t.fieldBg}${imp}`);
+  const fsz = { s: ['6px 10px', '14px'], m: ['10px 14px', '16px'], l: ['14px 18px', '18px'] }[t.fieldSize];
+  if (fsz) f.push(`padding: ${fsz[0]}${imp}`, `font-size: ${fsz[1]}${imp}`);
+  if (f.length) r.push(`${F} { ${f.join('; ')}; }`);
+  if (t.fieldShape === 'pill') r.push(`textarea { border-radius: 18px${imp}; }`);
+  if (t.focusColor) r.push(`${F.split(', ').map(s => s + ':focus').join(', ')} { outline: none${imp}; border-color: ${t.focusColor}${imp}; box-shadow: 0 0 0 3px ${t.focusColor}40${imp}; }`);
+
+  const B = 'button, input[type=submit], input[type=button], input[type=reset], a.btn, a.button, .btn, .button';
+  const b = [];
+  if (t.btnShape) b.push(`border-radius: ${radius[t.btnShape]}${imp}`);
+  const bcol = t.btnColor || '#1f5f99', btxt = t.btnText || '#ffffff';
+  if (t.btnStyle === 'solid') b.push(`background: ${bcol}${imp}`, `color: ${btxt}${imp}`, `border: 2px solid ${bcol}${imp}`);
+  if (t.btnStyle === 'outline') b.push(`background: transparent${imp}`, `color: ${t.btnText || bcol}${imp}`, `border: 2px solid ${bcol}${imp}`);
+  if (t.btnStyle === 'soft') b.push(`background: ${bcol}24${imp}`, `color: ${t.btnText || bcol}${imp}`, `border: 2px solid transparent${imp}`);
+  if (!t.btnStyle && t.btnColor) b.push(`background: ${t.btnColor}${imp}`, `border-color: ${t.btnColor}${imp}`);
+  if (!t.btnStyle && t.btnText) b.push(`color: ${t.btnText}${imp}`);
+  const bsz = { s: ['6px 14px', '14px'], m: ['10px 22px', '16px'], l: ['14px 30px', '18px'] }[t.btnSize];
+  if (bsz) b.push(`padding: ${bsz[0]}${imp}`, `font-size: ${bsz[1]}${imp}`);
+  const sh = { none: 'none', soft: '0 2px 6px rgba(0,0,0,.15)', raised: '0 8px 18px rgba(0,0,0,.22)' }[t.btnShadow];
+  if (sh) b.push(`box-shadow: ${sh}${imp}`);
+  if (t.btnWeight) b.push(`font-weight: ${t.btnWeight}${imp}`);
+  if (b.length) r.push(`${B} { ${b.join('; ')}; }`);
+  return r.join('\n');
+}
+function writeTheme() {
+  if (!doc) return;
+  let st = $('#dz-theme', doc);
+  if (!st) {
+    st = doc.createElement('style'); st.id = 'dz-theme';
+    doc.head.appendChild(st);
+  } else doc.head.appendChild(st);   // keep it last so it wins
+  st.setAttribute('data-dz-settings', JSON.stringify(theme));
+  st.textContent = themeCss();
+  // fonts
+  const fonts = usedFonts();
+  let link = $('#dz-fonts', doc);
+  if (fonts.length) {
+    if (!link) { link = doc.createElement('link'); link.id = 'dz-fonts'; link.rel = 'stylesheet'; doc.head.insertBefore(link, st); }
+    const href = 'https://fonts.googleapis.com/css2?' + fonts.map(f => 'family=' + f.replace(/ /g, '+') + ':wght@300;400;500;600;700;800;900').join('&') + '&display=swap';
+    if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+  } else if (link) link.remove();
+}
+function readThemeFromDoc() {
+  const st = $('#dz-theme', doc);
+  theme = {};
+  if (st) { try { theme = JSON.parse(st.getAttribute('data-dz-settings') || '{}'); } catch (e) { theme = {}; } }
+}
+const THEME_LABELS = {
+  bodyFont: 'גופן טקסט', headFont: 'גופן כותרות', headWeight: 'עובי כותרות', lineHeight: 'מרווח שורות',
+  h1Size: 'גודל כותרת ראשית', h2Size: 'גודל כותרת משנה', h3Size: 'גודל כותרת קטנה', bodySize: 'גודל טקסט רגיל',
+  linkColor: 'צבע קישורים', linkUnderline: 'קו תחתון לקישורים', fieldShape: 'צורת שדות', fieldStyle: 'סגנון שדות',
+  fieldSize: 'גודל שדות', fieldBorder: 'צבע מסגרת שדות', fieldBg: 'רקע שדות', focusColor: 'צבע שדה בהקלדה',
+  btnShape: 'צורת כפתורים', btnStyle: 'סגנון כפתורים', btnSize: 'גודל כפתורים', btnColor: 'צבע כפתורים',
+  btnText: 'צבע כיתוב כפתורים', btnShadow: 'צל כפתורים', btnWeight: 'עובי כיתוב כפתורים'
+};
+function setTheme(key, val) {
+  if (!doc) return;
+  const keepSel = selected;
+  if (selected) selected.removeAttribute('data-dz-sel');
+  selected = null;                       // so the change log doesn't name the selected element
+  checkpoint(THEME_LABELS[key] || key);
+  selected = keepSel;
+  if (selected) selected.setAttribute('data-dz-sel', '');
+  if (val === '' || val == null) delete theme[key]; else theme[key] = val;
+  writeTheme(); refreshThemeControls(); changed();
+}
+$$('[data-theme]').forEach(inp => {
+  inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => setTheme(inp.dataset.theme, inp.value.trim()));
+});
+$$('[data-clear-theme]').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.clearTheme, '')));
+$$('[data-tchips]').forEach(group => {
+  $$('.chip', group).forEach(c => c.addEventListener('click', () => setTheme(group.dataset.tchips, c.dataset.v)));
+});
+function refreshThemeControls() {
+  $$('[data-theme]').forEach(inp => {
+    const v = theme[inp.dataset.theme];
+    if (inp.type === 'color') { inp.value = v || '#000000'; inp.classList.toggle('unset', !v); }
+    else inp.value = v || '';
+  });
+  $$('[data-tchips]').forEach(group => {
+    const v = theme[group.dataset.tchips] || '';
+    $$('.chip', group).forEach(c => c.classList.toggle('on', c.dataset.v === v));
+  });
+}
+
+// ------------------------------------------------------------------
+// palette & ready-made themes
+// ------------------------------------------------------------------
+function roleOf(c) {
+  const { s, l } = hsl(c);
+  if (s > .3 && l > .18 && l < .86) return 'accent';
+  if (l >= .8) return 'light';
+  if (l <= .3) return 'dark';
+  return 'mid';
+}
+const ROLE_NAMES = { accent: 'צבע בולט', light: 'בהיר', dark: 'כהה', mid: 'אפור' };
+function refreshPalette() {
+  const box = $('#palette');
+  box.innerHTML = '';
+  if (!doc) return;
+  const colors = scanColors();
+  if (!colors.length) {
+    box.innerHTML = '<p class="hint">לא נמצאו צבעים בקוד העמוד עצמו (ייתכן שהעיצוב מגיע מקובץ חיצוני). אפשר עדיין לצבוע כל רכיב בלשונית "רכיב שנבחר".</p>';
+    return;
+  }
+  colors.forEach(col => {
+    const row = document.createElement('div');
+    row.className = 'swatch';
+    row.innerHTML = `<input type="color" value="${col.hex}" aria-label="שינוי צבע ${col.hex}">
+      <div class="meta"><b>${col.hex}</b><span>${ROLE_NAMES[roleOf(col.c)]}</span></div>
+      <span class="count">${col.count} שימושים</span>`;
+    const inp = $('input', row);
+    let current = col.hex;
+    inp.addEventListener('input', () => {
+      const keepSel = selected; selected = null;
+      checkpoint('החלפת צבע ' + col.hex);
+      selected = keepSel;
+      replaceColors({ [current]: inp.value });
+      current = inp.value;
+      $('b', row).textContent = inp.value;
+      changed();
+    });
+    inp.addEventListener('change', () => setTimeout(refreshPalette, 50));
+    box.appendChild(row);
+  });
+}
+function applyPreset(t) {
+  if (!doc) return;
+  const colors = scanColors();
+  if (!colors.length) return toast('לא נמצאו צבעים בקוד העמוד להחלפה');
+  const bodyBg = cssColorToHex(doc.defaultView.getComputedStyle(doc.body).backgroundColor) || '#ffffff';
+  const darkPage = hsl(fromHex(bodyBg)).l < .4;
+  const groups = { accent: [], light: [], dark: [], mid: [] };
+  colors.forEach(c => groups[roleOf(c.c)].push(c));
+  const bgGroup = darkPage ? groups.dark : groups.light;
+  const textGroup = darkPage ? groups.light : groups.dark;
+  const map = {};
+  // soft dividing lines: a blend between the background and the muted color
+  const mix = (a, b, w) => { const x = fromHex(a), y = fromHex(b); return toHex({ r: x.r + (y.r - x.r) * w, g: x.g + (y.g - x.g) * w, b: x.b + (y.b - x.b) * w }); };
+  const line = mix(t.bg, t.muted, .3);
+  // the page background itself always becomes the theme background
+  map[bodyBg] = t.bg;
+  bgGroup.forEach((c, i) => {
+    if (map[c.hex]) return;
+    const l = hsl(c.c).l;
+    const nearEdge = darkPage ? l < .14 : l > .955;     // near-white (or near-black on dark pages) = a surface
+    map[c.hex] = nearEdge ? (i === 0 && !groups.light.some(x => x.hex === bodyBg) ? t.bg : t.surface) : line;
+  });
+  textGroup.forEach((c, i) => { if (!map[c.hex]) map[c.hex] = i === 0 ? t.text : t.muted; });
+  groups.mid.forEach(c => { if (!map[c.hex]) map[c.hex] = t.muted; });
+  groups.accent.forEach((c, i) => { if (!map[c.hex]) map[c.hex] = i === 0 ? t.accent : t.accent2; });
+  const keepSel = selected; selected = null;
+  checkpoint('ערכת צבע: ' + t.name);
+  selected = keepSel;
+  replaceColors(map);
+  // a body with no background of its own still needs one
+  if (!colors.some(c => c.hex === bodyBg)) setStyle(doc.body, 'background-color', t.bg);
+  refreshPalette(); changed();
+  toast('הוחלה ערכת "' + t.name + '"');
+}
+function buildThemes() {
+  const box = $('#themes');
+  THEMES.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'theme';
+    b.innerHTML = `<div class="dots">${[t.bg, t.text, t.accent, t.accent2].map(c => `<i style="background:${c}"></i>`).join('')}</div><span>${t.name}</span>`;
+    b.onclick = () => applyPreset(t);
+    box.appendChild(b);
+  });
+}
+
+function refreshGlobalUI() { refreshPalette(); refreshThemeControls(); }
+
+// ------------------------------------------------------------------
+// misc UI
+// ------------------------------------------------------------------
+function showTab(name) {
+  $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  $$('.panel').forEach(p => p.classList.toggle('on', p.id === 'tab-' + name));
+  if (name === 'global') refreshPalette();
+}
+$$('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+$$('#devices button').forEach(b => b.onclick = () => {
+  $$('#devices button').forEach(x => x.classList.toggle('on', x === b));
+  $('#sheet').style.width = b.dataset.w;
+  $('#sheet').style.flex = 'none';
+});
+
+$('#btnCompare').addEventListener('click', () => {
+  const on = $('#sheet').classList.toggle('show-orig');
+  $('#btnCompare').classList.toggle('on', on);
+});
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2400);
+}
+
+function fillFontSelects() {
+  $$('.fontsel').forEach(sel => {
+    sel.innerHTML = FONTS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  });
+}
+
+// export
+$('#btnExport').onclick = () => {
+  finishTextEdit();
+  const code = serialize(true);
+  $('#outCode').value = code;
+  const ul = $('#changes'); ul.innerHTML = '';
+  if (!changes.length) {
+    ul.innerHTML = '<li>עדיין לא שינית דבר.</li>';
+  } else {
+    changes.forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
+  }
+  $('#exportDlg').showModal();
+};
+$('#btnCloseDlg').onclick = () => $('#exportDlg').close();
+$('#btnCopy').onclick = async () => {
+  const ta = $('#outCode');
+  try { await navigator.clipboard.writeText(ta.value); }
+  catch (e) { ta.select(); document.execCommand('copy'); }
+  toast('הקוד הועתק');
+};
+$('#btnDownload').onclick = () => {
+  const title = (doc && doc.title ? doc.title : 'page').replace(/[\\/:*?"<>|]+/g, '').trim() || 'page';
+  const blob = new Blob([$('#outCode').value], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = title + '-עיצוב-חדש.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+// loading
+function showLoader() {
+  $('#loader').hidden = false;
+  $('#btnCancelLoad').hidden = !doc;
+  const saved = loadSaved();
+  $('#btnResume').hidden = !(saved && saved.current && !doc);
+}
+$('#btnLoad').onclick = showLoader;
+$('#btnCancelLoad').onclick = () => { $('#loader').hidden = true; };
+$('#btnOpen').onclick = () => openPage($('#src').value);
+$('#fileIn').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { $('#src').value = r.result; openPage(r.result); };
+  r.readAsText(f);
+};
+$('#btnResume').onclick = async () => {
+  const s = loadSaved();
+  if (!s) return;
+  original = s.original; baseUrl = s.baseUrl || ''; doctype = s.doctype || '<!DOCTYPE html>';
+  changes = s.changes || [];
+  $('#baseUrl').value = baseUrl;
+  origFrame.srcdoc = prepare(original);
+  doctype = s.doctype || doctype;
+  await render(s.current);
+  $('#loader').hidden = true;
+  ['#btnExport', '#btnCompare'].forEach(x => $(x).disabled = false);
+  updateUndoButtons();
+  toast('העבודה הקודמת נטענה');
+};
+
+// shortcuts
+function handleShortcuts(e) {
+  if ($('[data-dz-edit]', doc || document)) return;
+  const tag = (e.target.tagName || '').toUpperCase();
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) && e.target.ownerDocument === document) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+  else if (e.key === 'Delete' && selected && doc) { e.preventDefault(); $('#btnDelete').click(); }
+}
+document.addEventListener('keydown', handleShortcuts);
+$('#btnUndo').onclick = undo;
+$('#btnRedo').onclick = redo;
+
+// start
+fillFontSelects();
+buildThemes();
+showLoader();
+})();
+</script>
+</body>
+</html>

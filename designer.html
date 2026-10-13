@@ -215,12 +215,98 @@
   }
   .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+
+  /* units, help marks */
+  .side select.unit { width: auto; flex: none; padding: 5px 4px; font-size: 13px; }
+  .group h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .q {
+    flex: none; background: transparent; border: 1px solid var(--line); color: var(--on-ink-muted);
+    width: 22px; height: 22px; border-radius: 50%; font-size: 13px; line-height: 1; padding: 0; font-weight: 700;
+  }
+  .q:hover { color: var(--mark); border-color: var(--mark); }
+  .sel-head { position: relative; }
+  .sel-head > .q { position: absolute; top: 16px; left: 0; }
+
+  /* proposals */
+  .work { position: relative; }
+  .gallery {
+    position: absolute; inset: 0; z-index: 6; display: grid; grid-template-columns: 340px 1fr;
+    background: var(--desk); min-height: 0;
+  }
+  .gallery[hidden] { display: none; }
+  .g-side {
+    background: var(--ink-2); border-left: 1px solid var(--line); padding: 16px;
+    overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0;
+  }
+  .g-side h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  .g-side .hint { margin: 0; }
+  .g-mix { display: grid; gap: 6px; }
+  .g-mix .row { grid-template-columns: 128px 1fr; margin: 0; }
+  .g-mix label { color: var(--on-ink-muted); font-size: 14px; }
+  .g-mix select {
+    width: 100%; background: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px;
+  }
+  .g-prev, .g-thumb { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: #fff; }
+  .g-prev { border-radius: var(--radius); border: 1px solid var(--line); flex: none; }
+  .g-prev iframe, .g-thumb iframe {
+    position: absolute; top: 0; right: 0; width: 1000px; height: 750px; border: 0;
+    transform-origin: top right; transform: scale(var(--s, .25)); pointer-events: none; background: #fff;
+  }
+  .g-main { overflow-y: auto; padding: 18px 22px 40px; min-height: 0; }
+  .g-title { margin: 0 0 14px; font-size: 22px; font-weight: 800; color: var(--ink); }
+  .g-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .g-card {
+    background: #fff; border: 0; border-radius: 10px; padding: 0; text-align: right; overflow: hidden;
+    color: var(--ink); box-shadow: 0 6px 18px rgba(27,36,51,.18); outline: 3px solid transparent; outline-offset: 0;
+  }
+  .g-card:hover { outline-color: var(--ink-3); }
+  .g-card.on { outline-color: var(--mark); }
+  .g-meta { padding: 10px 12px 12px; }
+  .g-meta b { font-size: 16px; display: block; }
+  .g-meta > span { font-size: 13px; color: #5a6475; }
+  .g-dots { display: flex; gap: 4px; margin-top: 8px; }
+  .g-dots i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
+  .g-uses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .g-uses:empty { display: none; }
+  .g-uses em {
+    font-style: normal; font-size: 12px; background: var(--mark); color: var(--mark-ink);
+    border-radius: 999px; padding: 1px 8px; font-weight: 700;
+  }
+
+  /* help */
+  dialog { overflow: auto; }
+  .help { max-height: none; }
+  .help-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .help h2 { font-size: 19px; margin: 22px 0 6px; padding-bottom: 6px; border-bottom: 2px solid #e3e7ee; scroll-margin-top: 60px; }
+  .help details { border-bottom: 1px solid #eef1f5; padding: 7px 0; }
+  .help summary { cursor: pointer; line-height: 1.55; scroll-margin-top: 60px; }
+  .help summary b { color: #1b2433; }
+  .help .short { color: #5a6475; }
+  .help summary b::after { content: ":"; }
+  .help details p { margin: 6px 0 4px; padding-right: 18px; font-size: 14.5px; color: #2c394f; }
+  .help .ex {
+    background: #f3f6fa; border-right: 3px solid var(--mark); padding: 6px 10px; border-radius: 4px;
+    display: block; margin-top: 6px;
+  }
+  .help-nav {
+    display: flex; flex-wrap: wrap; gap: 6px; position: sticky; top: -26px; background: #fff;
+    padding: 10px 0; z-index: 1; border-bottom: 1px solid #eef1f5;
+  }
+  .help-nav a {
+    font-size: 13px; border: 1px solid #d5dbe4; border-radius: 999px; padding: 3px 10px;
+    color: #1b2433; text-decoration: none;
+  }
+  .help-nav a:hover { border-color: #1b2433; }
+
   @media (max-width: 860px) {
     body { overflow: auto; grid-template-rows: auto auto; }
     .work { grid-template-columns: 1fr; }
     .stage { height: 70vh; order: -1; }
     .side { border-left: 0; border-top: 1px solid var(--line); }
     .panel { max-height: none; }
+    .gallery { position: fixed; top: 0; z-index: 30; grid-template-columns: 1fr; overflow-y: auto; }
+    .g-side { order: 2; border-left: 0; overflow: visible; }
+    .g-main { overflow: visible; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -238,7 +324,9 @@
     <button data-w="390px">טלפון</button>
   </div>
   <button class="btn" id="btnCompare" disabled>לפני / אחרי</button>
+  <button class="btn" id="btnIdeas" disabled>עשר הצעות עיצוב</button>
   <span class="spacer"></span>
+  <button class="btn" id="btnHelp">הוראות</button>
   <a class="home" href="/">חזרה למעבדה</a>
   <button class="btn primary" id="btnExport" disabled>שמירה וקבלת הקוד</button>
 </header>
@@ -253,18 +341,23 @@
 
     <!-- ===== global ===== -->
     <section class="panel on" id="tab-global">
-      <div class="group">
+      <div class="group" data-help="h-fluid">
+        <h3>התאמה לכל המסכים</h3>
+        <label class="check" style="margin-top:0"><input type="checkbox" id="fluidOn"> <span>מחשב, טאבלט וטלפון בהגדרה אחת</span></label>
+        <p class="hint" style="margin-top:8px">קופסאות ברוחב קבוע יהפכו לגמישות, תמונות לא יחרגו מהמסך, וכותרות יקטנו בהדרגה במסך צר.</p>
+      </div>
+      <div class="group" data-help="h-themes">
         <h3>ערכות צבע מוכנות</h3>
         <p class="hint">מחליפות את כל הצבעים בעמוד בבת אחת. אפשר לכוונן כל צבע לבד אחר כך.</p>
         <div class="themes" id="themes"></div>
       </div>
-      <div class="group">
+      <div class="group" data-help="h-palette">
         <h3>הצבעים שבעמוד</h3>
         <p class="hint">כל צבע מופיע פעם אחת. שינוי שלו מחליף אותו בכל מקום בעמוד.</p>
         <div class="palette" id="palette"></div>
       </div>
-      <div class="group">
-        <h3>גופנים</h3>
+      <div class="group" data-help="h-fonts">
+        <h3>גופנים וכותרות</h3>
         <div class="row"><label>טקסט רגיל</label><div class="ctl"><select data-theme="bodyFont" class="fontsel"></select></div></div>
         <div class="row"><label>כותרות</label><div class="ctl"><select data-theme="headFont" class="fontsel"></select></div></div>
         <div class="row"><label>עובי כותרות</label><div class="ctl">
@@ -273,15 +366,38 @@
         <div class="row"><label>מרווח בין שורות</label><div class="ctl">
           <select data-theme="lineHeight"><option value="">ללא שינוי</option><option value="1.35">צפוף</option><option value="1.6">רגיל</option><option value="1.85">מרווח</option></select>
         </div></div>
+        <div class="row"><label>צבע כותרות</label><div class="ctl"><input type="color" data-theme="headColor"><button class="clear" data-clear-theme="headColor">ללא</button></div></div>
+        <div class="row"><label>קישוט כותרות</label><div class="ctl">
+          <select data-theme="headDecor"><option value="">בלי</option><option value="underline">קו עבה מתחת</option><option value="rule">קו דק לרוחב</option><option value="mark">סימון כמו מרקר</option></select>
+        </div></div>
+        <div class="row"><label>רווח בין אותיות</label><div class="ctl">
+          <select data-theme="headTracking"><option value="">ללא שינוי</option><option value="-1px">צפוף</option><option value="0.5px">מרווח</option><option value="1.5px">מרווח מאוד</option></select>
+        </div></div>
       </div>
-      <div class="group">
+      <div class="group" data-help="h-sizes">
         <h3>גודל כותרות</h3>
         <div class="row"><label>כותרת ראשית</label><div class="ctl"><input type="number" min="10" max="120" data-theme="h1Size" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
         <div class="row"><label>כותרת משנה</label><div class="ctl"><input type="number" min="10" max="100" data-theme="h2Size" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
         <div class="row"><label>כותרת קטנה</label><div class="ctl"><input type="number" min="10" max="80" data-theme="h3Size" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
         <div class="row"><label>טקסט רגיל</label><div class="ctl"><input type="number" min="10" max="40" data-theme="bodySize" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
       </div>
-      <div class="group">
+      <div class="group" data-help="h-cards">
+        <h3>קופסאות וכרטיסים</h3>
+        <p class="hint" id="cardHint">חל על הקופסאות שבעמוד (אזורים עם רקע, מסגרת או צל).</p>
+        <div class="row"><label>עיגול פינות</label><div class="ctl"><input type="number" min="0" max="80" data-theme="cardRadius" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
+        <div class="row"><label>צל</label><div class="ctl">
+          <select data-theme="cardShadow"><option value="">ללא שינוי</option><option value="none">בלי צל</option><option value="soft">עדין</option><option value="lift">מרחף</option><option value="hard">צל חד</option><option value="glow">עמוק</option></select>
+        </div></div>
+        <div class="row"><label>מסגרת</label><div class="ctl">
+          <select data-theme="cardBorder"><option value="">ללא שינוי</option><option value="none">בלי</option><option value="line">קו דק</option><option value="thick">קו עבה</option><option value="double">קו כפול</option><option value="top">פס צבעוני למעלה</option></select>
+        </div></div>
+        <div class="row"><label>צבע מסגרת</label><div class="ctl"><input type="color" data-theme="cardBorderColor"><button class="clear" data-clear-theme="cardBorderColor">ללא</button></div></div>
+        <div class="row"><label>ריווח פנימי</label><div class="ctl"><input type="number" min="0" max="120" data-theme="cardPad" placeholder="ללא שינוי"><span class="colorval">px</span></div></div>
+        <div class="row"><label>צבע רקע</label><div class="ctl"><input type="color" data-theme="cardBg"><button class="clear" data-clear-theme="cardBg">ללא</button></div></div>
+        <div class="row"><label>תמונות</label><div class="ctl"><input type="number" min="0" max="200" data-theme="imgRadius" placeholder="עיגול פינות"><span class="colorval">px</span></div></div>
+        <button class="btn" id="btnRedetect" style="width:100%">זיהוי הקופסאות מחדש</button>
+      </div>
+      <div class="group" data-help="h-links">
         <h3>קישורים</h3>
         <div class="row"><label>צבע קישור</label><div class="ctl"><input type="color" data-theme="linkColor"><button class="clear" data-clear-theme="linkColor">ללא</button></div></div>
         <div class="row"><label>קו תחתון</label><div class="ctl">
@@ -297,17 +413,17 @@
         לחיצה כפולה על טקסט מאפשרת לשנות את המילים עצמן.
       </div>
       <div id="selPanel" hidden>
-        <div class="sel-head">
+        <div class="sel-head" data-help="h-select">
           <div class="sel-name" id="selName"></div>
           <div class="crumbs" id="crumbs"></div>
           <label class="check"><input type="checkbox" id="applyAll"> <span id="applyAllLbl">החל על כל הרכיבים הדומים</span></label>
         </div>
 
-        <div class="group">
+        <div class="group" data-help="h-text">
           <h3>טקסט</h3>
           <div class="row"><label>המילים</label><div class="ctl"><button class="btn" id="btnEditText" style="width:100%">עריכת הטקסט בעמוד</button></div></div>
           <div class="row"><label>גופן</label><div class="ctl"><select data-prop="font-family" class="fontsel"></select></div></div>
-          <div class="row"><label>גודל</label><div class="ctl"><input type="number" min="6" max="200" data-prop="font-size" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>גודל</label><div class="ctl"><input type="number" min="6" max="200" data-prop="font-size"><select class="unit" title="יחידה"><option value="px">px</option><option value="flex">גמיש</option></select></div></div>
           <div class="row"><label>עובי</label><div class="ctl">
             <select data-prop="font-weight"><option value="">ללא שינוי</option><option value="300">דק</option><option value="400">רגיל</option><option value="500">בינוני</option><option value="600">חצי מודגש</option><option value="700">מודגש</option><option value="800">מודגש מאוד</option><option value="900">שחור</option></select>
           </div></div>
@@ -318,7 +434,7 @@
           <div class="row"><label>בין שורות</label><div class="ctl"><input type="number" min="0.8" max="3" step="0.05" data-prop="line-height"></div></div>
         </div>
 
-        <div class="group">
+        <div class="group" data-help="h-box">
           <h3>רקע, מסגרת וצל</h3>
           <div class="row"><label>צבע רקע</label><div class="ctl"><input type="color" data-prop="background-color"><span class="colorval"></span><button class="clear" data-clear="background-color" data-to="transparent">שקוף</button></div></div>
           <div class="row"><label>עובי קו</label><div class="ctl"><input type="number" min="0" max="40" data-prop="border-width" data-unit="px"><span class="colorval">px</span></div></div>
@@ -326,22 +442,23 @@
             <select data-prop="border-style"><option value="">ללא שינוי</option><option value="none">בלי קו</option><option value="solid">רציף</option><option value="dashed">מקווקו</option><option value="dotted">מנוקד</option><option value="double">כפול</option></select>
           </div></div>
           <div class="row"><label>צבע קו</label><div class="ctl"><input type="color" data-prop="border-color"><span class="colorval"></span><button class="clear" data-clear="border-color">ללא</button></div></div>
-          <div class="row"><label>עיגול פינות</label><div class="ctl"><input type="number" min="0" max="999" data-prop="border-radius" data-unit="px"><span class="colorval">px</span></div></div>
+          <div class="row"><label>עיגול פינות</label><div class="ctl"><input type="number" min="0" max="999" data-prop="border-radius"><select class="unit" title="יחידה"><option value="px">px</option><option value="%">%</option></select></div></div>
           <div class="row"><label>צל</label><div class="ctl">
             <select data-prop="box-shadow"><option value="">ללא שינוי</option><option value="none">בלי צל</option><option value="0 1px 3px rgba(0,0,0,.12)">עדין</option><option value="0 6px 18px rgba(0,0,0,.14)">בינוני</option><option value="0 16px 40px rgba(0,0,0,.22)">חזק</option><option value="6px 6px 0 rgba(0,0,0,.85)">צל חד</option></select>
           </div></div>
         </div>
 
-        <div class="group">
+        <div class="group" data-help="h-size">
           <h3>מידות וריווח</h3>
-          <div class="row"><label>ריווח פנימי</label><div class="ctl"><input type="number" min="0" max="300" data-prop="padding" data-unit="px"><span class="colorval">px</span></div></div>
-          <div class="row"><label>רווח מעל</label><div class="ctl"><input type="number" min="-200" max="300" data-prop="margin-top" data-unit="px"><span class="colorval">px</span></div></div>
-          <div class="row"><label>רווח מתחת</label><div class="ctl"><input type="number" min="-200" max="300" data-prop="margin-bottom" data-unit="px"><span class="colorval">px</span></div></div>
-          <div class="row"><label>רוחב</label><div class="ctl"><input type="text" data-prop="width" placeholder="למשל 100% או 400px"></div></div>
-          <div class="row"><label>רוחב מקסימלי</label><div class="ctl"><input type="text" data-prop="max-width" placeholder="למשל 900px"></div></div>
+          <div class="row"><label>ריווח פנימי</label><div class="ctl"><input type="number" min="0" max="300" data-prop="padding"><select class="unit" title="יחידה"><option value="px">px</option><option value="%">%</option></select></div></div>
+          <div class="row"><label>רווח מעל</label><div class="ctl"><input type="number" min="-200" max="300" data-prop="margin-top"><select class="unit" title="יחידה"><option value="px">px</option><option value="%">%</option></select></div></div>
+          <div class="row"><label>רווח מתחת</label><div class="ctl"><input type="number" min="-200" max="300" data-prop="margin-bottom"><select class="unit" title="יחידה"><option value="px">px</option><option value="%">%</option></select></div></div>
+          <div class="row"><label>רוחב</label><div class="ctl"><input type="number" min="0" max="5000" data-prop="width" placeholder="אוטומטי"><select class="unit" title="יחידה"><option value="%">%</option><option value="px">px</option></select></div></div>
+          <div class="row"><label>רוחב מקסימלי</label><div class="ctl"><input type="number" min="0" max="5000" data-prop="max-width" placeholder="ללא הגבלה"><select class="unit" title="יחידה"><option value="px">px</option><option value="%">%</option></select></div></div>
+          <button class="btn" id="btnFluid" style="width:100%">הפיכה לגמיש (מתאים לכל מסך)</button>
         </div>
 
-        <div class="group">
+        <div class="group" data-help="h-pos">
           <h3>מיקום</h3>
           <div class="actions" style="margin-bottom:10px">
             <button class="btn" id="btnUp">הזזה למעלה</button>
@@ -351,7 +468,7 @@
           <div class="row"><label>הזזה למעלה/מטה</label><div class="ctl"><input type="number" min="-1000" max="1000" id="nudgeY" placeholder="0"><span class="colorval">px</span></div></div>
         </div>
 
-        <div class="group">
+        <div class="group" data-help="h-actions">
           <h3>פעולות</h3>
           <div class="actions">
             <button class="btn" id="btnDup">שכפול</button>
@@ -366,7 +483,7 @@
 
     <!-- ===== fields & buttons ===== -->
     <section class="panel" id="tab-fields">
-      <div class="group">
+      <div class="group" data-help="h-fields">
         <h3>שדות מילוי</h3>
         <p class="hint">משפיע על כל תיבות הטקסט, הרשימות הנפתחות והשדות הארוכים בעמוד.</p>
         <div class="row"><label>צורה</label><div class="ctl chips" data-tchips="fieldShape">
@@ -382,7 +499,7 @@
         <div class="row"><label>צבע רקע</label><div class="ctl"><input type="color" data-theme="fieldBg"><button class="clear" data-clear-theme="fieldBg">ללא</button></div></div>
         <div class="row"><label>צבע בזמן הקלדה</label><div class="ctl"><input type="color" data-theme="focusColor"><button class="clear" data-clear-theme="focusColor">ללא</button></div></div>
       </div>
-      <div class="group">
+      <div class="group" data-help="h-buttons">
         <h3>כפתורים</h3>
         <div class="row"><label>צורה</label><div class="ctl chips" data-tchips="btnShape">
           <button class="chip" data-v="">ללא שינוי</button><button class="chip" data-v="square">מרובע</button><button class="chip" data-v="rounded">מעוגל</button><button class="chip" data-v="pill">קפסולה</button>
@@ -435,6 +552,22 @@
       </div>
     </div>
   </main>
+
+  <section class="gallery" id="gallery" hidden aria-label="הצעות עיצוב">
+    <aside class="g-side">
+      <h2>השילוב שלך</h2>
+      <p class="hint">לחיצה על הצעה בוחרת את כולה. כאן אפשר לקחת כל חלק מהצעה אחרת.</p>
+      <div class="g-prev"><iframe id="mixFrame" tabindex="-1" title="תצוגת השילוב"></iframe></div>
+      <div class="g-mix" id="gMix"></div>
+      <button class="btn primary" id="gApply">החלת העיצוב על העמוד</button>
+      <button class="btn" id="gClose">סגירה בלי שינוי</button>
+      <p class="hint">ההחלה מתחילה מהעמוד המקורי. שינויים שעשית קודם אפשר להחזיר עם "ביטול".</p>
+    </aside>
+    <div class="g-main">
+      <h2 class="g-title">עשר הצעות לעמוד שלך</h2>
+      <div class="g-grid" id="gGrid"></div>
+    </div>
+  </section>
 </div>
 
 <dialog id="exportDlg">
@@ -450,6 +583,143 @@
       <button class="btn" id="btnCloseDlg">חזרה לעריכה</button>
     </div>
     <p style="margin-top:14px;font-size:14px">אם העמוד המקורי מציג תוכן שמשתנה (רשימות, הודעות, נתונים מהשרת) - כדאי לא להחליף אותו ישירות בקוד הזה, אלא להעביר את הקוד ואת רשימת השינויים למי שמתחזק את האתר, כדי שישלב את העיצוב במקור.</p>
+  </div>
+</dialog>
+
+<dialog id="helpDlg" class="help-dlg">
+  <div class="card help">
+    <div class="help-top">
+      <h1>הוראות</h1>
+      <button class="btn" id="btnCloseHelp">סגירה</button>
+    </div>
+    <p>בכל שורה: שם הכפתור ומה הוא עושה בקצרה. לחיצה על השורה פותחת הסבר מלא ודוגמה.</p>
+    <nav class="help-nav">
+      <a href="#h-start">פתיחת עמוד</a><a href="#h-top">סרגל עליון</a><a href="#h-ideas">עשר הצעות</a><a href="#h-fluid">כל המסכים</a>
+      <a href="#h-themes">צבעים</a><a href="#h-fonts">גופנים</a><a href="#h-cards">קופסאות</a><a href="#h-select">רכיב שנבחר</a>
+      <a href="#h-fields">שדות</a><a href="#h-buttons">כפתורים</a><a href="#h-keys">מקלדת</a>
+    </nav>
+
+    <h2 id="h-start">פתיחת עמוד</h2>
+    <details><summary><b>הדבקת הקוד</b> <span class="short">מכניס את העמוד שלך לעורך</span></summary>
+      <p>פותחים את העמוד באתר ולוחצים Ctrl+U. נפתח חלון עם כל הקוד. לוחצים Ctrl+A (סימון הכל), Ctrl+C (העתקה), חוזרים לכאן, מדביקים בתיבה ולוחצים "פתיחה לעריכה".
+      <span class="ex">דוגמה: נכנסים לדף המעבדה, Ctrl+U, Ctrl+A, Ctrl+C, ומדביקים כאן.</span></p></details>
+    <details><summary><b>כתובת האתר</b> <span class="short">עוזרת לתמונות ולקבצי עיצוב להיטען</span></summary>
+      <p>לא חובה. אם אחרי הפתיחה חסרות תמונות או שהעמוד נראה "ערום", חזור ל"טעינת עמוד אחר" והכנס את כתובת האתר שממנו העתקת.
+      <span class="ex">דוגמה: https://האתר-שלי.up.railway.app/</span></p></details>
+    <details><summary><b>בחירת קובץ מהמחשב</b> <span class="short">פותח קובץ html ששמרת</span></summary>
+      <p>במקום להדביק אפשר לבחור קובץ. זה שימושי גם לקובץ שהורדת מכאן קודם, כדי להמשיך לעבוד עליו.</p></details>
+    <details><summary><b>המשך מהפעם הקודמת</b> <span class="short">מחזיר את העבודה האחרונה</span></summary>
+      <p>העבודה נשמרת אוטומטית אחרי כל שינוי, רק בדפדפן הזה ובמחשב הזה. אם ניקית את נתוני הדפדפן, היא לא תהיה שם.</p></details>
+
+    <h2 id="h-top">הסרגל העליון</h2>
+    <details><summary><b>טעינת עמוד אחר</b> <span class="short">מחליף את העמוד שבעריכה</span></summary>
+      <p>פותח שוב את חלון ההדבקה. העמוד הנוכחי יוחלף, אז שמור את הקוד שלו קודם אם צריך.</p></details>
+    <details><summary><b>ביטול / חזרה</b> <span class="short">מבטל את השינוי האחרון, או מחזיר אותו</span></summary>
+      <p>עד 80 צעדים אחורה. אפשר גם עם המקלדת: Ctrl+Z לביטול, Ctrl+Y לחזרה.
+      <span class="ex">דוגמה: מחקת קופסה בטעות? "ביטול" מחזיר אותה.</span></p></details>
+    <details><summary><b>מחשב / טאבלט / טלפון</b> <span class="short">מראה את העמוד ברוחב של כל מכשיר</span></summary>
+      <p>זו רק תצוגה, היא לא משנה את העיצוב. כך בודקים שהעמוד נראה טוב בכל מסך.
+      <span class="ex">דוגמה: אחרי שהדלקת "התאמה לכל המסכים", לחץ "טלפון" ובדוק שאין גלילה הצידה.</span></p></details>
+    <details><summary><b>לפני / אחרי</b> <span class="short">מראה את העמוד המקורי, בלי השינויים</span></summary>
+      <p>לחיצה מציגה את המקור, ולחיצה נוספת מחזירה לגרסה שלך. כלום לא נמחק.</p></details>
+    <details><summary><b>עשר הצעות עיצוב</b> <span class="short">פותח עשרה סגנונות מוכנים לעמוד</span></summary>
+      <p>ראה הסבר מלא בפרק "עשר הצעות עיצוב" למטה.</p></details>
+    <details><summary><b>שמירה וקבלת הקוד</b> <span class="short">נותן את הקוד החדש להעתקה או להורדה</span></summary>
+      <p>מציג את כל הקוד של העמוד עם השינויים ורשימה של מה ששונה. "העתקת הקוד" מעתיק אותו, ו"הורדה כקובץ" שומרת קובץ html.
+      <span class="ex">דוגמה: מעתיקים ושולחים לי עם הבקשה "תחליף את העמוד הזה בעיצוב הזה".</span></p></details>
+
+    <h2 id="h-ideas">עשר הצעות עיצוב</h2>
+    <details><summary><b>בחירת הצעה שלמה</b> <span class="short">לוחצים על כרטיס, ואז "החלת העיצוב"</span></summary>
+      <p>כל כרטיס הוא העמוד שלך בסגנון אחר: צבעים, גופנים, צורת כפתורים, קופסאות וריווח. לחיצה על כרטיס מציגה אותו בתצוגה הגדולה בצד.</p></details>
+    <details><summary><b>שילוב בין הצעות</b> <span class="short">לוקחים כל חלק מהצעה אחרת</span></summary>
+      <p>בצד יש חמש שורות: צבעים, גופנים, כפתורים ושדות, קופסאות, כותרות וריווח. בכל שורה בוחרים מאיזו הצעה לקחת את החלק הזה. התצוגה מתעדכנת מיד.
+      <span class="ex">דוגמה: צבעים מ"חצות", גופנים מ"קלאסי", כפתורים מ"גלויה", והשאר מ"משרד".</span></p></details>
+    <details><summary><b>התגיות הצהובות בכרטיס</b> <span class="short">מראות אילו חלקים לקוחים מההצעה הזו</span></summary>
+      <p>אם כרטיס מסומן "צבעים" ו"גופנים", אלה החלקים שהשילוב שלך לוקח ממנו כרגע.</p></details>
+    <details><summary><b>החלת העיצוב על העמוד</b> <span class="short">מעביר את השילוב לעמוד שבעריכה</span></summary>
+      <p>ההחלה מתחילה מהעמוד המקורי, כך ששינויים ידניים שעשית קודם יוחלפו. אפשר להחזיר אותם עם "ביטול". אחרי ההחלה אפשר להמשיך לכוונן כל דבר בלשוניות.</p></details>
+
+    <h2 id="h-fluid">התאמה לכל המסכים</h2>
+    <details><summary><b>מחשב, טאבלט וטלפון בהגדרה אחת</b> <span class="short">מתאים את כל העמוד לכל רוחב מסך</span></summary>
+      <p>כשהמתג דולק: (1) קופסה עם רוחב קבוע בפיקסלים הופכת לגמישה, כלומר ממלאת את המסך אבל לא עוברת את הרוחב המקורי. (2) תמונות וסרטונים לא יוצאים מהמסך. (3) כותרות גדולות קטנות בהדרגה במסך צר.
+      <span class="ex">דוגמה: קופסה ברוחב 800px יוצאת מהמסך בטלפון. אחרי ההתאמה היא ברוחב מלא בטלפון, ובמחשב נשארת 800.</span></p></details>
+    <details><summary><b>px / % / גמיש</b> <span class="short">יחידת המידה ליד כל מספר ברכיב שנבחר</span></summary>
+      <p><b>px</b>: גודל קבוע, זהה בכל מסך. <b>%</b>: חלק מהמקום שיש לרכיב, ולכן מתאים את עצמו לכל מסך. <b>גמיש</b> (לגודל טקסט): המספר הוא הגודל במחשב, ובמסך קטן הטקסט מתכווץ לבד.
+      <span class="ex">דוגמה: רוחב 90% = תמיד 90% מהמקום, בכל מכשיר. גודל 40 גמיש = 40 במחשב ובערך 25 בטלפון.</span></p></details>
+    <details><summary><b>הפיכה לגמיש</b> <span class="short">הופך רכיב אחד לגמיש בלחיצה</span></summary>
+      <p>הכפתור נמצא ברכיב שנבחר, בקבוצת "מידות וריווח". הוא קובע רוחב 100% עם מקסימום של הרוחב הנוכחי.
+      <span class="ex">דוגמה: בחר את הקופסה הראשית ולחץ. במחשב היא תיראה אותו דבר, ובטלפון תתכווץ למסך.</span></p></details>
+
+    <h2 id="h-themes">צבעים</h2>
+    <details><summary><b>ערכות צבע מוכנות</b> <span class="short">מחליפות את כל הצבעים בבת אחת</span></summary>
+      <p>כל ערכה מחליפה רקע, טקסט וצבעים בולטים לפי התפקיד של כל צבע בעמוד שלך. אפשר לנסות כמה ולבטל.</p></details>
+    <details><summary id="h-palette"><b>הצבעים שבעמוד</b> <span class="short">רשימה של כל צבע בעמוד, עם אפשרות להחליף</span></summary>
+      <p>כל צבע מופיע פעם אחת, עם מספר המקומות שבהם הוא בשימוש. החלפה של צבע משנה אותו בכל המקומות האלה יחד.
+      <span class="ex">דוגמה: הכתום מופיע ב-5 מקומות. בוחרים במקומו כחול, וכל ה-5 מתחלפים.</span></p></details>
+
+    <h2 id="h-fonts">גופנים וכותרות</h2>
+    <details><summary><b>טקסט רגיל / כותרות</b> <span class="short">גופן לכל העמוד, וגופן נפרד לכותרות</span></summary>
+      <p>הגופנים נטענים מגוגל, וכולם תומכים בעברית. "ללא שינוי" משאיר את המקורי.
+      <span class="ex">דוגמה: טקסט ב-Assistant וכותרות ב-Frank Ruhl Libre נותנים מראה מכובד.</span></p></details>
+    <details><summary><b>עובי כותרות / מרווח בין שורות</b> <span class="short">כמה הכותרות מודגשות, וכמה אוויר יש בין השורות</span></summary>
+      <p>מרווח גדול יותר בין השורות מקל על קריאה של טקסט ארוך.</p></details>
+    <details><summary><b>צבע כותרות</b> <span class="short">צבע אחד לכל הכותרות</span></summary>
+      <p>"ללא" מחזיר את הצבע המקורי.</p></details>
+    <details><summary><b>קישוט כותרות</b> <span class="short">קו או סימון מתחת לכותרות</span></summary>
+      <p><b>קו עבה מתחת</b>: פס צבעוני באורך הכותרת. <b>קו דק לרוחב</b>: קו עדין מתחת לכותרות המשנה. <b>סימון כמו מרקר</b>: רקע צבעוני בחצי התחתון של הכותרת.</p></details>
+    <details><summary><b>רווח בין אותיות</b> <span class="short">צפיפות האותיות בכותרות</span></summary>
+      <p>"צפוף" מתאים לכותרות עבות וגדולות. "מרווח" מתאים לכותרות דקות.</p></details>
+    <details><summary id="h-sizes"><b>גודל כותרות</b> <span class="short">גודל קבוע לכל סוג כותרת</span></summary>
+      <p>כותרת ראשית, כותרת משנה וכותרת קטנה, בפיקסלים. אם "התאמה לכל המסכים" דולקת, הגודל הזה הוא הגודל במחשב, ובטלפון הכותרות יקטנו לבד.</p></details>
+    <details><summary id="h-links"><b>קישורים</b> <span class="short">צבע הקישורים, ואם יש להם קו תחתון</span></summary>
+      <p>לא משפיע על קישורים שנראים כמו כפתורים.</p></details>
+
+    <h2 id="h-cards">קופסאות וכרטיסים</h2>
+    <details><summary><b>מה נחשב קופסה</b> <span class="short">אזור בעמוד עם רקע, מסגרת או צל</span></summary>
+      <p>העורך מזהה את הקופסאות לבד, ומציג כמה נמצאו. "זיהוי הקופסאות מחדש" מזהה שוב, למשל אחרי שהוספת או שכפלת רכיבים.</p></details>
+    <details><summary><b>עיגול פינות, צל, מסגרת</b> <span class="short">צורת כל הקופסאות יחד</span></summary>
+      <p><b>מרחף</b>: צל רך ורחב. <b>צל חד</b>: צל בצבע המסגרת, בלי טשטוש. <b>פס צבעוני למעלה</b>: קו עבה רק בחלק העליון.
+      <span class="ex">דוגמה: פינות 20, צל מרחף, בלי מסגרת = מראה רך ומודרני.</span></p></details>
+    <details><summary><b>ריווח פנימי / צבע רקע / תמונות</b> <span class="short">אוויר בתוך הקופסה, צבע שלה, ועיגול פינות לתמונות</span></summary>
+      <p>ריווח פנימי הוא המרחק בין קצה הקופסה לתוכן שבתוכה.</p></details>
+
+    <h2 id="h-select">רכיב שנבחר</h2>
+    <details><summary><b>בחירת רכיב</b> <span class="short">לחיצה על משהו בעמוד בוחרת אותו</span></summary>
+      <p>מסביב לרכיב שנבחר מופיעה מסגרת צהובה, והלשונית "רכיב שנבחר" נפתחת.</p></details>
+    <details><summary><b>הכפתורים הקטנים מתחת לשם</b> <span class="short">בחירת הרכיב שעוטף אותו</span></summary>
+      <p>אם לחצת על מילה ורצית את כל הקופסה, לחץ על "קופסה" ברשימה הקטנה.</p></details>
+    <details><summary><b>החל על כל הרכיבים הדומים</b> <span class="short">כל שינוי יחול על כל הרכיבים מאותו סוג</span></summary>
+      <p>"דומה" הוא רכיב מאותו סוג עם אותו שם עיצוב בקוד. המספר בסוגריים אומר כמה כאלה יש.
+      <span class="ex">דוגמה: יש 6 כרטיסי מוצר. בוחרים אחד, מסמנים את התיבה, ומשנים צבע. כל ה-6 משתנים.</span></p></details>
+    <details><summary id="h-text"><b>טקסט</b> <span class="short">המילים, גופן, גודל, עובי, צבע, יישור</span></summary>
+      <p>"עריכת הטקסט בעמוד" (או לחיצה כפולה) מאפשרת להקליד ישירות בעמוד. מסיימים עם Esc או בלחיצה במקום אחר.
+      <span class="ex">דוגמה: לחיצה כפולה על כותרת, מוחקים, כותבים כותרת חדשה, Esc.</span></p></details>
+    <details><summary id="h-box"><b>רקע, מסגרת וצל</b> <span class="short">צבע רקע, קו מסביב, פינות וצל לרכיב אחד</span></summary>
+      <p>"שקוף" מסיר את הרקע. כדי שיופיע קו, צריך עובי וגם סוג קו.</p></details>
+    <details><summary id="h-size"><b>מידות וריווח</b> <span class="short">ריווח פנימי, רווחים מעל ומתחת, ורוחב</span></summary>
+      <p>רוחב ריק = אוטומטי. לכל מספר אפשר לבחור px או %.
+      <span class="ex">דוגמה: רוחב 100% ורוחב מקסימלי 700px = מלא בטלפון, עד 700 במחשב.</span></p></details>
+    <details><summary id="h-pos"><b>מיקום</b> <span class="short">הזזה לפני או אחרי הרכיב השכן, או הזזה במספר פיקסלים</span></summary>
+      <p>"הזזה למעלה/למטה" מחליפה מקום עם הרכיב הסמוך. הזזה במספרים רק מזיזה את התצוגה ולא משנה את הסדר. מספר חיובי לצדדים מזיז שמאלה.</p></details>
+    <details><summary id="h-actions"><b>פעולות</b> <span class="short">שכפול, קו מתחת, ניקוי, הסתרה, מחיקה</span></summary>
+      <p><b>ניקוי העיצוב שלי</b>: מבטל את כל מה ששינית ברכיב הזה בלבד. <b>הסתרה</b>: הרכיב נשאר בקוד אבל לא מוצג. <b>מחיקה</b>: מסיר אותו (אפשר לבטל).</p></details>
+
+    <h2 id="h-fields">שדות מילוי</h2>
+    <details><summary><b>צורה / סגנון / גודל</b> <span class="short">איך נראות כל התיבות בעמוד</span></summary>
+      <p><b>מרובע, מעוגל, קפסולה</b>: צורת הפינות. <b>מסגרת</b>: קו מסביב. <b>קו תחתון</b>: רק קו מתחת, נקי מאוד. <b>רקע מלא</b>: תיבה צבועה בלי קו.
+      <span class="ex">דוגמה: קפסולה + רקע מלא = מראה רך של אפליקציה.</span></p></details>
+    <details><summary><b>צבעי השדות</b> <span class="short">מסגרת, רקע, וצבע התיבה בזמן הקלדה</span></summary>
+      <p>"צבע בזמן הקלדה" מופיע סביב התיבה שהמשתמש כותב בה.</p></details>
+
+    <h2 id="h-buttons">כפתורים</h2>
+    <details><summary><b>צורה / סגנון / גודל</b> <span class="short">איך נראים כל הכפתורים בעמוד</span></summary>
+      <p><b>מלא</b>: צבוע לגמרי. <b>מסגרת</b>: רק קו בצבע. <b>רך</b>: רקע בהיר בגוון של הצבע.</p></details>
+    <details><summary><b>צבעים, צל, עובי כיתוב</b> <span class="short">צבע הכפתור וצבע הכיתוב עליו</span></summary>
+      <p>כדאי שיהיה הבדל ברור בין צבע הכפתור לכיתוב, כדי שיהיה קל לקרוא.</p></details>
+
+    <h2 id="h-keys">קיצורי מקלדת</h2>
+    <details open><summary><b>Ctrl+Z / Ctrl+Y / Delete / Esc</b> <span class="short">ביטול, חזרה, מחיקת הרכיב שנבחר, סיום עריכת טקסט</span></summary>
+      <p>הקיצורים לא פועלים בזמן הקלדה בתיבות.</p></details>
   </div>
 </dialog>
 
@@ -724,9 +994,10 @@ async function openPage(html) {
   origFrame.srcdoc = prepared;
   await render(prepared);
   $('#loader').hidden = true;
-  ['#btnExport', '#btnCompare'].forEach(s => $(s).disabled = false);
+  ['#btnExport', '#btnCompare', '#btnIdeas'].forEach(s => $(s).disabled = false);
   updateUndoButtons();
   autosave();
+  openGallery();
 }
 
 // ------------------------------------------------------------------
@@ -899,6 +1170,26 @@ function fillElementPanel() {
       const hx = cssColorToHex(prop === 'border-color' ? cs.borderTopColor : v);
       inp.value = hx || '#ffffff';
       inp.nextElementSibling.textContent = hx || 'שקוף';
+    } else if (inp.type === 'number' && unitSel(inp)) {
+      // px / % / flexible
+      const us = unitSel(inp);
+      if (/^clamp\(/.test(inline)) {
+        us.value = 'flex';
+        const m = inline.match(/([\d.]+)px\s*\)\s*$/);
+        inp.value = m ? +m[1] : '';
+      } else if (/%$/.test(inline)) {
+        us.value = '%'; inp.value = parseFloat(inline);
+      } else if (inline) {
+        us.value = 'px'; inp.value = Math.round(parseFloat(inline) * 10) / 10 || 0;
+      } else {
+        us.value = us.options[0].value === '%' ? '%' : 'px';
+        if (prop === 'width' || prop === 'max-width') { inp.value = ''; return; }
+        if (prop === 'border-radius') v = cs.borderTopLeftRadius;
+        if (prop === 'padding') v = cs.paddingTop;
+        const n = parseFloat(v);
+        us.value = 'px';
+        inp.value = isNaN(n) ? '' : Math.round(n * 10) / 10;
+      }
     } else if (inp.type === 'number') {
       if (prop === 'border-width') v = cs.borderTopWidth;
       if (prop === 'border-radius') v = cs.borderTopLeftRadius;
@@ -980,11 +1271,28 @@ const PROP_LABELS = {
   'box-shadow': 'צל', padding: 'ריווח פנימי', 'margin-top': 'רווח מעל', 'margin-bottom': 'רווח מתחת',
   width: 'רוחב', 'max-width': 'רוחב מקסימלי', 'text-align': 'יישור טקסט'
 };
+function unitSel(inp) {
+  const n = inp.nextElementSibling;
+  return n && n.classList.contains('unit') ? n : null;
+}
+// flexible text size: the number is the desktop size, it shrinks on narrow screens
+function flexSize(n) {
+  const min = n <= 20 ? n * 0.85 : n * 0.62;
+  return `clamp(${Math.round(min)}px, ${(n / 12).toFixed(2)}vw, ${n}px)`;
+}
+function buildValue(num, unit) {
+  if (num === '' || isNaN(parseFloat(num))) return '';
+  const n = parseFloat(num);
+  if (unit === '%') return n + '%';
+  if (unit === 'flex') return flexSize(n);
+  return n + 'px';
+}
 function elementPropChange(inp) {
   if (!selected) return;
   const prop = inp.dataset.prop;
   let v = inp.value.trim();
-  if (v !== '' && inp.dataset.unit) v = v + inp.dataset.unit;
+  if (unitSel(inp)) v = buildValue(v, unitSel(inp).value);
+  else if (v !== '' && inp.dataset.unit) v = v + inp.dataset.unit;
   if (prop === 'font-family' && v) { ensureFont(v); v = `"${v}", sans-serif`; }
   checkpoint(PROP_LABELS[prop] || prop);
   targets().forEach(el => {
@@ -998,6 +1306,35 @@ function elementPropChange(inp) {
   if (inp.type === 'color') inp.nextElementSibling.textContent = inp.value;
   changed();
 }
+// switching unit converts the number so the element keeps its current size
+$$('#tab-element select.unit').forEach(us => {
+  let prev = us.value;
+  us.addEventListener('focus', () => { prev = us.value; });
+  us.addEventListener('change', () => {
+    const inp = us.previousElementSibling;
+    if (!selected || inp.value === '') { prev = us.value; return; }
+    const n = parseFloat(inp.value);
+    const parentW = (selected.parentElement || doc.body).clientWidth || 1;
+    if (prev === 'px' && us.value === '%') inp.value = Math.round(n / parentW * 1000) / 10;
+    else if (prev === '%' && us.value === 'px') inp.value = Math.round(n * parentW / 100);
+    prev = us.value;
+    elementPropChange(inp);
+  });
+});
+$('#btnFluid').onclick = () => {
+  if (!selected || selected === doc.body) return;
+  checkpoint('הפיכה לגמיש');
+  targets().forEach(el => {
+    const w = Math.round(el.getBoundingClientRect().width);
+    setStyle(el, 'width', '100%');
+    setStyle(el, 'max-width', w + 'px');
+    setStyle(el, 'box-sizing', 'border-box');
+    const fs = parseFloat(doc.defaultView.getComputedStyle(el).fontSize);
+    if (/^H[1-3]$/.test(el.tagName) && fs > 22) setStyle(el, 'font-size', flexSize(Math.round(fs)));
+  });
+  fillElementPanel(); changed();
+  toast('הרכיב גמיש עכשיו. נסה את התצוגה "טלפון"');
+};
 $$('#tab-element [data-prop]').forEach(inp => {
   inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => elementPropChange(inp));
 });
@@ -1100,15 +1437,26 @@ function themeCss() {
   const t = theme, r = [];
   const imp = ' !important';
   const fam = f => `"${f}", sans-serif${imp}`;
+  if (t.pageBg) r.push(`html, body { background-color: ${t.pageBg}${imp}; }`);
+  if (t.pageText) r.push(`body { color: ${t.pageText}${imp}; }`);
   if (t.bodyFont) r.push(`body, body p, body li, body td, body th, body label, body input, body select, body textarea, body button, body a, body span, body div { font-family: ${fam(t.bodyFont)}; }`);
   const H = 'h1, h2, h3, h4, h5, h6';
   if (t.headFont) r.push(`${H} { font-family: ${fam(t.headFont)}; }`);
   if (t.headWeight) r.push(`${H} { font-weight: ${t.headWeight}${imp}; }`);
   if (t.lineHeight) r.push(`body, body p, body li { line-height: ${t.lineHeight}${imp}; }`);
   if (t.bodySize) r.push(`body, body p, body li, body td { font-size: ${t.bodySize}px${imp}; }`);
-  if (t.h1Size) r.push(`h1 { font-size: ${t.h1Size}px${imp}; }`);
-  if (t.h2Size) r.push(`h2 { font-size: ${t.h2Size}px${imp}; }`);
-  if (t.h3Size) r.push(`h3 { font-size: ${t.h3Size}px${imp}; }`);
+  ['h1', 'h2', 'h3'].forEach(h => {
+    const size = +t[h + 'Size'] || (t.fluid ? +t['fluid' + h] : 0);
+    if (!size) return;
+    r.push(`${h} { font-size: ${t.fluid ? flexSize(size) : size + 'px'}${imp}; }`);
+  });
+  if (t.headColor) r.push(`${H} { color: ${t.headColor}${imp}; }`);
+  if (t.headColor && t.bandSel) r.push(`${t.bandSel.split(', ').map(x => `${x} :is(${H})`).join(', ')} { color: inherit${imp}; }`);
+  if (t.headTracking) r.push(`${H} { letter-spacing: ${t.headTracking}${imp}; }`);
+  const decor = t.decorColor || t.headColor || t.linkColor || '#2541b2';
+  if (t.headDecor === 'underline') r.push(`h1, h2 { display: inline-block${imp}; border-bottom: 4px solid ${decor}${imp}; padding-bottom: .12em${imp}; }`);
+  if (t.headDecor === 'rule') r.push(`h2 { border-bottom: 1px solid ${t.ruleColor || '#c9d0db'}${imp}; padding-bottom: .35em${imp}; }`);
+  if (t.headDecor === 'mark') r.push(`h1, h2 { display: inline-block${imp}; padding: 0 .15em${imp}; background-image: linear-gradient(transparent 58%, ${t.markColor || decor + '40'} 58%)${imp}; }`);
   if (t.linkColor) r.push(`a:not(.btn):not(.button) { color: ${t.linkColor}${imp}; }`);
   if (t.linkUnderline) r.push(`a:not(.btn):not(.button) { text-decoration: ${t.linkUnderline}${imp}; }`);
 
@@ -1126,6 +1474,7 @@ function themeCss() {
   if (fsz) f.push(`padding: ${fsz[0]}${imp}`, `font-size: ${fsz[1]}${imp}`);
   if (f.length) r.push(`${F} { ${f.join('; ')}; }`);
   if (t.fieldShape === 'pill') r.push(`textarea { border-radius: 18px${imp}; }`);
+  if (t.fieldText) r.push(`${F} { color: ${t.fieldText}${imp}; }`);
   if (t.focusColor) r.push(`${F.split(', ').map(s => s + ':focus').join(', ')} { outline: none${imp}; border-color: ${t.focusColor}${imp}; box-shadow: 0 0 0 3px ${t.focusColor}40${imp}; }`);
 
   const B = 'button, input[type=submit], input[type=button], input[type=reset], a.btn, a.button, .btn, .button';
@@ -1139,10 +1488,43 @@ function themeCss() {
   if (!t.btnStyle && t.btnText) b.push(`color: ${t.btnText}${imp}`);
   const bsz = { s: ['6px 14px', '14px'], m: ['10px 22px', '16px'], l: ['14px 30px', '18px'] }[t.btnSize];
   if (bsz) b.push(`padding: ${bsz[0]}${imp}`, `font-size: ${bsz[1]}${imp}`);
-  const sh = { none: 'none', soft: '0 2px 6px rgba(0,0,0,.15)', raised: '0 8px 18px rgba(0,0,0,.22)' }[t.btnShadow];
+  const sh = { none: 'none', soft: '0 2px 6px rgba(0,0,0,.15)', raised: '0 8px 18px rgba(0,0,0,.22)', hard: '4px 4px 0 rgba(0,0,0,.85)' }[t.btnShadow];
   if (sh) b.push(`box-shadow: ${sh}${imp}`);
   if (t.btnWeight) b.push(`font-weight: ${t.btnWeight}${imp}`);
   if (b.length) r.push(`${B} { ${b.join('; ')}; }`);
+
+  // boxes / cards found on the page
+  if (t.cardSel) {
+    const c = [];
+    const cb = t.cardBorderColor || '#c9d0db';
+    if (t.cardRadius !== undefined && t.cardRadius !== '') c.push(`border-radius: ${t.cardRadius}px${imp}`);
+    const bmap = {
+      none: `border: 0${imp}`, line: `border: 1px solid ${cb}${imp}`, thick: `border: 2.5px solid ${cb}${imp}`,
+      double: `border: 4px double ${cb}${imp}`, top: `border: 0${imp}; border-top: 5px solid ${t.cardAccent || cb}${imp}`
+    };
+    if (bmap[t.cardBorder]) c.push(bmap[t.cardBorder]);
+    const smap = {
+      none: 'none', soft: '0 2px 10px rgba(0,0,0,.07)', lift: '0 20px 44px -14px rgba(20,24,40,.28)',
+      hard: `6px 6px 0 ${cb}`, glow: '0 14px 34px rgba(0,0,0,.45)'
+    };
+    if (smap[t.cardShadow]) c.push(`box-shadow: ${smap[t.cardShadow]}${imp}`);
+    if (t.cardPad) c.push(`padding: ${t.fluid ? `clamp(${Math.round(t.cardPad * .55)}px, ${(t.cardPad / 12).toFixed(2)}vw, ${t.cardPad}px)` : t.cardPad + 'px'}${imp}`);
+    if (t.cardBg) c.push(`background-color: ${t.cardBg}${imp}`);
+    if (t.cardText) c.push(`color: ${t.cardText}${imp}`);
+    if (c.length) r.push(`${t.cardSel} { ${c.join('; ')}; }`);
+  }
+  if (t.imgRadius !== undefined && t.imgRadius !== '') r.push(`img { border-radius: ${t.imgRadius}px${imp}; }`);
+
+  // one setting for every screen size
+  if (t.fluid) {
+    r.push(`img, video, iframe, embed, object, svg, canvas { max-width: 100%${imp}; }`);
+    r.push(`img, video { height: auto${imp}; }`);
+    r.push(`input, select, textarea, table, pre { max-width: 100%${imp}; }`);
+    r.push(`pre { overflow: auto${imp}; }`);
+    r.push(`body { overflow-wrap: break-word; }`);
+    r.push(`input, select, textarea, button { box-sizing: border-box${imp}; }`);
+    if (t.stackSel) r.push(`@media (max-width: 640px) { ${t.stackSel} { flex-direction: column${imp}; grid-template-columns: 1fr${imp}; } }`);
+  }
   return r.join('\n');
 }
 function writeTheme() {
@@ -1174,7 +1556,10 @@ const THEME_LABELS = {
   linkColor: 'צבע קישורים', linkUnderline: 'קו תחתון לקישורים', fieldShape: 'צורת שדות', fieldStyle: 'סגנון שדות',
   fieldSize: 'גודל שדות', fieldBorder: 'צבע מסגרת שדות', fieldBg: 'רקע שדות', focusColor: 'צבע שדה בהקלדה',
   btnShape: 'צורת כפתורים', btnStyle: 'סגנון כפתורים', btnSize: 'גודל כפתורים', btnColor: 'צבע כפתורים',
-  btnText: 'צבע כיתוב כפתורים', btnShadow: 'צל כפתורים', btnWeight: 'עובי כיתוב כפתורים'
+  btnText: 'צבע כיתוב כפתורים', btnShadow: 'צל כפתורים', btnWeight: 'עובי כיתוב כפתורים',
+  headColor: 'צבע כותרות', headDecor: 'קישוט כותרות', headTracking: 'רווח בין אותיות',
+  cardRadius: 'פינות הקופסאות', cardShadow: 'צל הקופסאות', cardBorder: 'מסגרת הקופסאות',
+  cardBorderColor: 'צבע מסגרת הקופסאות', cardPad: 'ריווח בקופסאות', cardBg: 'רקע הקופסאות', imgRadius: 'פינות התמונות'
 };
 function setTheme(key, val) {
   if (!doc) return;
@@ -1185,7 +1570,10 @@ function setTheme(key, val) {
   selected = keepSel;
   if (selected) selected.setAttribute('data-dz-sel', '');
   if (val === '' || val == null) delete theme[key]; else theme[key] = val;
-  writeTheme(); refreshThemeControls(); changed();
+  if (/^card/.test(key) && !theme.cardSel) theme.cardSel = detectCards();
+  writeTheme();
+  if (key === 'headColor') refreshBands();
+  refreshThemeControls(); changed();
 }
 $$('[data-theme]').forEach(inp => {
   inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => setTheme(inp.dataset.theme, inp.value.trim()));
@@ -1204,7 +1592,166 @@ function refreshThemeControls() {
     const v = theme[group.dataset.tchips] || '';
     $$('.chip', group).forEach(c => c.classList.toggle('on', c.dataset.v === v));
   });
+  $('#fluidOn').checked = !!theme.fluid;
+  const n = theme.cardSel ? theme.cardSel.split(', ').length : 0;
+  $('#cardHint').textContent = n
+    ? `חל על ${n === 1 ? 'סוג אחד של קופסה' : n + ' סוגי קופסאות'} שזוהו בעמוד (אזורים עם רקע, מסגרת או צל).`
+    : 'חל על הקופסאות שבעמוד (אזורים עם רקע, מסגרת או צל).';
 }
+
+// ------------------------------------------------------------------
+// boxes (cards) detection
+// ------------------------------------------------------------------
+function selectorFor(el) {
+  if (el.id && !/^dz-/.test(el.id)) return '#' + CSS.escape(el.id);
+  const cls = [...el.classList].filter(c => !/^dz-/.test(c));
+  if (cls.length) return el.tagName.toLowerCase() + cls.map(c => '.' + CSS.escape(c)).join('');
+  const parts = [];
+  let e = el;
+  while (e && e !== doc.body && e.parentElement) {
+    const tag = e.tagName.toLowerCase();
+    const same = [...e.parentElement.children].filter(x => x.tagName === e.tagName);
+    parts.unshift(same.length > 1 ? `${tag}:nth-of-type(${same.indexOf(e) + 1})` : tag);
+    e = e.parentElement;
+  }
+  return 'body > ' + parts.join(' > ');
+}
+function detectCards() {
+  const win = doc.defaultView, vw = doc.documentElement.clientWidth || 1200;
+  const bodyBg = cssColorToHex(win.getComputedStyle(doc.body).backgroundColor) || '#ffffff';
+  const tags = new Set(['DIV', 'SECTION', 'ARTICLE', 'ASIDE', 'FORM', 'FIELDSET', 'MAIN', 'HEADER', 'FOOTER', 'NAV', 'LI', 'BLOCKQUOTE']);
+  const sels = new Set();
+  for (const el of $$('body *', doc)) {
+    if (!tags.has(el.tagName)) continue;
+    const cs = win.getComputedStyle(el);
+    if (cs.display === 'none' || cs.display.startsWith('inline')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 120 || r.height < 40 || r.width > vw * 0.97) continue;
+    const bg = cssColorToHex(cs.backgroundColor);
+    const hasBg = bg && bg !== bodyBg;
+    const hasShadow = cs.boxShadow && cs.boxShadow !== 'none';
+    const hasBorder = ['Top', 'Right', 'Bottom', 'Left']
+      .filter(k => parseFloat(cs['border' + k + 'Width']) > 0 && cs['border' + k + 'Style'] !== 'none').length >= 3;
+    if (!(hasBg || hasShadow || hasBorder)) continue;
+    sels.add(selectorFor(el));
+    if (sels.size >= 40) break;
+  }
+  return [...sels].join(', ');
+}
+$('#btnRedetect').onclick = () => {
+  if (!doc) return;
+  checkpoint('זיהוי קופסאות');
+  theme.cardSel = detectCards();
+  writeTheme(); refreshThemeControls(); changed();
+  toast(theme.cardSel ? 'הקופסאות זוהו מחדש' : 'לא נמצאו קופסאות בעמוד');
+};
+
+// ------------------------------------------------------------------
+// one setting for every screen
+// ------------------------------------------------------------------
+// fixed widths in the page's own css become "full width, up to the original size"
+function fixFixedWidths() {
+  let count = 0;
+  const re = /(^|[;{\s])width(\s*):(\s*)(\d{3,4}(?:\.\d+)?)px(\s*!important)?/gi;
+  const fix = text => text.replace(re, (all, pre, s1, s2, num, imp) => {
+    if (parseFloat(num) < 360) return all;
+    count++;
+    return `${pre}width:100%${imp || ''};max-width:${num}px${imp || ''}`;
+  });
+  $$('style', doc).forEach(st => {
+    if (st.id === 'dz-theme' || st.hasAttribute('data-dz-editor')) return;
+    const t = fix(st.textContent);
+    if (t !== st.textContent) st.textContent = t;
+  });
+  $$('[style]', doc).forEach(el => {
+    const a = el.getAttribute('style'), t = fix(a);
+    if (t !== a) el.setAttribute('style', t);
+  });
+  $$('table[width], img[width]', doc).forEach(el => {
+    if (parseFloat(el.getAttribute('width')) >= 360 && !/%/.test(el.getAttribute('width'))) {
+      el.style.setProperty('max-width', '100%', 'important'); count++;
+    }
+  });
+  if (!$('meta[name=viewport]', doc)) {
+    const m = doc.createElement('meta');
+    m.name = 'viewport'; m.content = 'width=device-width, initial-scale=1';
+    doc.head.insertBefore(m, doc.head.firstChild); count++;
+  }
+  return count;
+}
+// headings that sit on a colored band would vanish with a single heading color
+function bgOf(el) {
+  const win = doc.defaultView;
+  for (let e = el; e; e = e.parentElement) {
+    const hx = cssColorToHex(win.getComputedStyle(e).backgroundColor);
+    if (hx) return hx;
+  }
+  return '#ffffff';
+}
+function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }
+function detectBands() {
+  if (!theme.headColor) return '';
+  const sels = new Set();
+  $$('h1, h2, h3, h4, h5, h6', doc).forEach(h => {
+    let band = h.parentElement;
+    const bg = bgOf(h);
+    if (contrast(theme.headColor, bg) >= 2.6) return;
+    while (band && band !== doc.body && !cssColorToHex(doc.defaultView.getComputedStyle(band).backgroundColor)) band = band.parentElement;
+    if (band && band !== doc.body && band !== doc.documentElement) sels.add(selectorFor(band));
+  });
+  return [...sels].join(', ');
+}
+function refreshBands() {
+  delete theme.bandSel;
+  writeTheme();
+  const b = detectBands();
+  if (b) { theme.bandSel = b; writeTheme(); }
+}
+
+// side-by-side rows (flex / grid) that should stack on a phone
+function detectRows() {
+  const win = doc.defaultView, sels = new Set();
+  for (const el of $$('body *', doc)) {
+    const cs = win.getComputedStyle(el);
+    const kids = [...el.children].filter(k => k.getBoundingClientRect().width > 0);
+    if (kids.length < 2) continue;
+    const isFlexRow = /flex/.test(cs.display) && !/column/.test(cs.flexDirection);
+    const isGrid = /grid/.test(cs.display) && cs.gridTemplateColumns.split(' ').length > 1;
+    if (!isFlexRow && !isGrid) continue;
+    const tops = new Set(kids.map(k => Math.round(k.getBoundingClientRect().top)));
+    const blocky = kids.filter(k => k.getBoundingClientRect().width > 120).length >= 2;
+    if (blocky && tops.size < kids.length) sels.add(selectorFor(el));
+    if (sels.size >= 30) break;
+  }
+  return [...sels].join(', ');
+}
+function enableFluid() {
+  const win = doc.defaultView;
+  ['h1', 'h2', 'h3'].forEach(h => {
+    const el = $(h, doc);
+    if (el && !theme[h + 'Size']) {
+      const fs = Math.round(parseFloat(win.getComputedStyle(el).fontSize));
+      if (fs > 20) theme['fluid' + h] = fs;
+    }
+  });
+  const n = fixFixedWidths();
+  theme.fluid = '1';
+  theme.stackSel = detectRows();
+  return n;
+}
+$('#fluidOn').addEventListener('change', e => {
+  if (!doc) { e.target.checked = false; return; }
+  const keepSel = selected; selected = null;
+  checkpoint(e.target.checked ? 'התאמה לכל המסכים' : 'ביטול התאמה לכל המסכים');
+  selected = keepSel;
+  if (e.target.checked) {
+    const n = enableFluid();
+    toast(n ? `תוקנו ${n} מקומות עם רוחב קבוע. בדוק בתצוגת "טלפון"` : 'העמוד מותאם. בדוק בתצוגת "טלפון"');
+  } else {
+    ['fluid', 'fluidh1', 'fluidh2', 'fluidh3', 'stackSel'].forEach(k => delete theme[k]);
+  }
+  writeTheme(); refreshThemeControls(); changed();
+});
 
 // ------------------------------------------------------------------
 // palette & ready-made themes
@@ -1247,37 +1794,55 @@ function refreshPalette() {
     box.appendChild(row);
   });
 }
-function applyPreset(t) {
-  if (!doc) return;
+function mixHex(a, b, w) {
+  const x = fromHex(a), y = fromHex(b);
+  return toHex({ r: x.r + (y.r - x.r) * w, g: x.g + (y.g - x.g) * w, b: x.b + (y.b - x.b) * w });
+}
+function lum(h) {
+  const c = fromHex(h);
+  const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  return .2126 * f(c.r) + .7152 * f(c.g) + .0722 * f(c.b);
+}
+function onColor(h) {               // readable text color on top of h
+  const L = lum(h);
+  return 1.05 / (L + .05) >= (L + .05) / .059 ? '#ffffff' : '#14181f';
+}
+// swap every color in the page by its role (background / surface / text / muted / accent)
+function remapPalette(t) {
   const colors = scanColors();
-  if (!colors.length) return toast('לא נמצאו צבעים בקוד העמוד להחלפה');
-  const bodyBg = cssColorToHex(doc.defaultView.getComputedStyle(doc.body).backgroundColor) || '#ffffff';
+  const cs = doc.defaultView.getComputedStyle(doc.body);
+  const bodyBg = cssColorToHex(cs.backgroundColor) || '#ffffff';
+  const bodyText = cssColorToHex(cs.color) || '#000000';
+  const res = { found: colors.length > 0, bgKnown: colors.some(c => c.hex === bodyBg), textKnown: colors.some(c => c.hex === bodyText) };
+  if (!colors.length) return res;
   const darkPage = hsl(fromHex(bodyBg)).l < .4;
   const groups = { accent: [], light: [], dark: [], mid: [] };
   colors.forEach(c => groups[roleOf(c.c)].push(c));
   const bgGroup = darkPage ? groups.dark : groups.light;
   const textGroup = darkPage ? groups.light : groups.dark;
   const map = {};
-  // soft dividing lines: a blend between the background and the muted color
-  const mix = (a, b, w) => { const x = fromHex(a), y = fromHex(b); return toHex({ r: x.r + (y.r - x.r) * w, g: x.g + (y.g - x.g) * w, b: x.b + (y.b - x.b) * w }); };
-  const line = mix(t.bg, t.muted, .3);
-  // the page background itself always becomes the theme background
+  const line = mixHex(t.bg, t.muted, .3);
   map[bodyBg] = t.bg;
   bgGroup.forEach((c, i) => {
     if (map[c.hex]) return;
     const l = hsl(c.c).l;
     const nearEdge = darkPage ? l < .14 : l > .955;     // near-white (or near-black on dark pages) = a surface
-    map[c.hex] = nearEdge ? (i === 0 && !groups.light.some(x => x.hex === bodyBg) ? t.bg : t.surface) : line;
+    map[c.hex] = nearEdge ? (i === 0 && !res.bgKnown ? t.bg : t.surface) : line;
   });
   textGroup.forEach((c, i) => { if (!map[c.hex]) map[c.hex] = i === 0 ? t.text : t.muted; });
   groups.mid.forEach(c => { if (!map[c.hex]) map[c.hex] = t.muted; });
   groups.accent.forEach((c, i) => { if (!map[c.hex]) map[c.hex] = i === 0 ? t.accent : t.accent2; });
+  replaceColors(map);
+  return res;
+}
+function applyPreset(t) {
+  if (!doc) return;
+  if (!scanColors().length) return toast('לא נמצאו צבעים בקוד העמוד להחלפה');
   const keepSel = selected; selected = null;
   checkpoint('ערכת צבע: ' + t.name);
   selected = keepSel;
-  replaceColors(map);
-  // a body with no background of its own still needs one
-  if (!colors.some(c => c.hex === bodyBg)) setStyle(doc.body, 'background-color', t.bg);
+  const res = remapPalette(t);
+  if (!res.bgKnown) setStyle(doc.body, 'background-color', t.bg);
   refreshPalette(); changed();
   toast('הוחלה ערכת "' + t.name + '"');
 }
@@ -1293,6 +1858,230 @@ function buildThemes() {
 }
 
 function refreshGlobalUI() { refreshPalette(); refreshThemeControls(); }
+
+// ------------------------------------------------------------------
+// ten ready-made designs, each made of five parts that can be mixed
+// ------------------------------------------------------------------
+const ASPECTS = [
+  ['colors', 'צבעים'], ['fonts', 'גופנים'], ['controls', 'כפתורים ושדות'],
+  ['shapes', 'קופסאות ופינות'], ['type', 'כותרות וריווח']
+];
+const PROPOSALS = [
+  { name: 'חוף', desc: 'רענן ורך, טורקיז ואלמוג',
+    pal: { bg: '#e8f5f4', surface: '#ffffff', text: '#0b3440', muted: '#55767f', accent: '#0a8f92', accent2: '#ff7f51' },
+    fonts: { body: 'Rubik', head: 'Rubik', weight: '700', track: '' },
+    controls: { btnShape: 'pill', btnStyle: 'solid', btnShadow: 'soft', btnWeight: '600', fieldShape: 'pill', fieldStyle: 'filled' },
+    shapes: { radius: 20, shadow: 'lift', border: 'none', img: 16 },
+    type: { lh: '1.65', decor: '', headAccent: true, pad: 32 } },
+  { name: 'משרד', desc: 'עסקי, מסודר וענייני',
+    pal: { bg: '#f1f3f8', surface: '#ffffff', text: '#14213d', muted: '#5c6784', accent: '#2541b2', accent2: '#0f9d76' },
+    fonts: { body: 'IBM Plex Sans Hebrew', head: 'IBM Plex Sans Hebrew', weight: '700', track: '' },
+    controls: { btnShape: 'rounded', btnStyle: 'solid', btnShadow: 'none', btnWeight: '600', fieldShape: 'rounded', fieldStyle: 'outline' },
+    shapes: { radius: 6, shadow: 'soft', border: 'line', img: 4 },
+    type: { lh: '1.6', decor: 'rule', headAccent: false, pad: 28 } },
+  { name: 'חצות', desc: 'כהה, כחול עמוק וזהב',
+    pal: { bg: '#0c1430', surface: '#16214a', text: '#e8ecfb', muted: '#97a3c7', accent: '#7b93ff', accent2: '#ffc857' },
+    fonts: { body: 'Assistant', head: 'Heebo', weight: '300', track: '0.5px' },
+    controls: { btnShape: 'rounded', btnStyle: 'solid', btnShadow: 'raised', btnWeight: '700', fieldShape: 'rounded', fieldStyle: 'filled' },
+    shapes: { radius: 14, shadow: 'glow', border: 'line', img: 10 },
+    type: { lh: '1.7', decor: 'underline', headAccent: false, pad: 32 } },
+  { name: 'גלויה', desc: 'שמח ובועט, מסגרות עבות',
+    pal: { bg: '#fff1c2', surface: '#ffffff', text: '#2a2350', muted: '#5f5888', accent: '#e63e6d', accent2: '#06b6d4' },
+    fonts: { body: 'Varela Round', head: 'Rubik', weight: '800', track: '' },
+    controls: { btnShape: 'pill', btnStyle: 'solid', btnShadow: 'hard', btnWeight: '700', fieldShape: 'rounded', fieldStyle: 'outline' },
+    shapes: { radius: 22, shadow: 'hard', border: 'thick', img: 18 },
+    type: { lh: '1.6', decor: 'mark', headAccent: false, pad: 30 } },
+  { name: 'קלאסי', desc: 'מכובד, בורדו וזהב, גופן מסורתי',
+    pal: { bg: '#f2f3f5', surface: '#ffffff', text: '#1f242c', muted: '#5e6470', accent: '#7d1d2c', accent2: '#a8842c' },
+    fonts: { body: 'Assistant', head: 'Frank Ruhl Libre', weight: '700', track: '' },
+    controls: { btnShape: 'square', btnStyle: 'outline', btnShadow: 'none', btnWeight: '700', fieldShape: 'square', fieldStyle: 'underline' },
+    shapes: { radius: 2, shadow: 'none', border: 'double', img: 0 },
+    type: { lh: '1.8', decor: 'rule', headAccent: true, pad: 36 } },
+  { name: 'כרם', desc: 'ירוק עמוק וחרדל, טבעי ונינוח',
+    pal: { bg: '#ecf2e8', surface: '#fbfdf9', text: '#1d301f', muted: '#5a6e58', accent: '#2f6b3b', accent2: '#d9a21b' },
+    fonts: { body: 'Alef', head: 'Suez One', weight: '400', track: '' },
+    controls: { btnShape: 'rounded', btnStyle: 'soft', btnShadow: 'none', btnWeight: '700', fieldShape: 'rounded', fieldStyle: 'outline' },
+    shapes: { radius: 12, shadow: 'soft', border: 'none', img: 12 },
+    type: { lh: '1.75', decor: 'underline', headAccent: true, pad: 28 } },
+  { name: 'שוויצרי', desc: 'שחור-לבן חד עם כחול חשמלי',
+    pal: { bg: '#ffffff', surface: '#ffffff', text: '#000000', muted: '#4a4a4a', accent: '#0038ff', accent2: '#ff2d20' },
+    fonts: { body: 'Heebo', head: 'Heebo', weight: '900', track: '-1px' },
+    controls: { btnShape: 'square', btnStyle: 'solid', btnShadow: 'none', btnWeight: '800', fieldShape: 'square', fieldStyle: 'outline' },
+    shapes: { radius: 0, shadow: 'none', border: 'thick', img: 0 },
+    type: { lh: '1.5', decor: '', headAccent: false, pad: 24 } },
+  { name: 'לבנדר', desc: 'אוורירי ועדין, סגול וורוד',
+    pal: { bg: '#f5f2ff', surface: '#ffffff', text: '#2b2150', muted: '#71698f', accent: '#6a4cf5', accent2: '#ff8fb8' },
+    fonts: { body: 'Noto Sans Hebrew', head: 'Noto Sans Hebrew', weight: '800', track: '-0.5px' },
+    controls: { btnShape: 'pill', btnStyle: 'soft', btnShadow: 'none', btnWeight: '700', fieldShape: 'pill', fieldStyle: 'filled' },
+    shapes: { radius: 28, shadow: 'lift', border: 'none', img: 24 },
+    type: { lh: '1.8', decor: '', headAccent: true, pad: 40 } },
+  { name: 'גרפיט', desc: 'פחם כהה, זהב ותכלת, יוקרתי',
+    pal: { bg: '#1b1c20', surface: '#25272d', text: '#f0eee9', muted: '#a8a49b', accent: '#e0b12f', accent2: '#53b9ae' },
+    fonts: { body: 'Heebo', head: 'Bellefair', weight: '400', track: '0.5px' },
+    controls: { btnShape: 'square', btnStyle: 'outline', btnShadow: 'none', btnWeight: '600', fieldShape: 'square', fieldStyle: 'underline' },
+    shapes: { radius: 4, shadow: 'none', border: 'line', img: 2 },
+    type: { lh: '1.75', decor: 'rule', headAccent: true, pad: 36 } },
+  { name: 'שמש', desc: 'בהיר ואנרגטי, כתום וכחול',
+    pal: { bg: '#f3f8ff', surface: '#ffffff', text: '#10243e', muted: '#566b85', accent: '#f26a00', accent2: '#0a6fd6' },
+    fonts: { body: 'Assistant', head: 'Secular One', weight: '400', track: '' },
+    controls: { btnShape: 'pill', btnStyle: 'solid', btnShadow: 'raised', btnWeight: '700', fieldShape: 'rounded', fieldStyle: 'outline' },
+    shapes: { radius: 16, shadow: 'soft', border: 'top', img: 12 },
+    type: { lh: '1.6', decor: 'mark', headAccent: false, pad: 28 } }
+];
+
+function recipeTheme(r) {
+  const pal = r.colors.pal, f = r.fonts.fonts, c = r.controls.controls, sh = r.shapes.shapes, ty = r.type.type;
+  const line = mixHex(pal.bg, pal.muted, .3);
+  const t = {
+    bodyFont: f.body, headFont: f.head, headWeight: f.weight, headTracking: f.track,
+    btnShape: c.btnShape, btnStyle: c.btnStyle, btnShadow: c.btnShadow, btnWeight: c.btnWeight,
+    fieldShape: c.fieldShape, fieldStyle: c.fieldStyle,
+    btnColor: pal.accent, btnText: c.btnStyle === 'solid' ? onColor(pal.accent) : '',
+    fieldBorder: mixHex(pal.surface, pal.muted, .45),
+    fieldBg: c.fieldStyle === 'filled' ? mixHex(pal.surface, pal.muted, .13) : c.fieldStyle === 'outline' ? pal.surface : '',
+    fieldText: pal.text, focusColor: pal.accent,
+    cardRadius: sh.radius, cardShadow: sh.shadow, cardBorder: sh.border,
+    cardBorderColor: (sh.border === 'thick' || sh.shadow === 'hard') ? pal.text : sh.border === 'double' ? pal.accent2 : line,
+    cardAccent: pal.accent, imgRadius: sh.img,
+    lineHeight: ty.lh, headDecor: ty.decor, headColor: ty.headAccent ? pal.accent : '',
+    decorColor: pal.accent, markColor: pal.accent2 + '59', ruleColor: line, cardPad: ty.pad,
+    linkColor: pal.accent
+  };
+  Object.keys(t).forEach(k => { if (t[k] === '' || t[k] === undefined) delete t[k]; });
+  return t;
+}
+// applies a recipe to the page currently in `doc` (no history entry)
+function applyRecipe(r) {
+  const cardSel = detectCards();            // before colors change
+  const pal = r.colors.pal;
+  const res = remapPalette(pal);
+  const t = recipeTheme(r);
+  if (!res.bgKnown) t.pageBg = pal.bg;
+  if (!res.textKnown) t.pageText = pal.text;
+  if (!res.found) { t.cardBg = pal.surface; t.cardText = pal.text; }
+  t.cardSel = cardSel;
+  ['headDecor', 'headColor', 'headTracking', 'btnText', 'fieldBg'].forEach(k => delete theme[k]);
+  theme = Object.assign({}, theme, t);
+  writeTheme();
+  refreshBands();
+}
+function withDoc(d, fn) {
+  const saved = { doc, theme, selected };
+  doc = d; theme = {}; selected = null;
+  try { readThemeFromDoc(); fn(); }
+  finally { doc = saved.doc; theme = saved.theme; selected = saved.selected; }
+}
+let prepCache = { key: null, html: '' };
+function preparedOriginal() {
+  const key = original + '\u0000' + baseUrl;
+  if (prepCache.key !== key) {
+    const dt = doctype;
+    prepCache = { key, html: prepare(original) };
+    doctype = dt;
+  }
+  return prepCache.html;
+}
+function renderVariant(ifr, recipe) {
+  return new Promise(res => {
+    ifr.onload = () => {
+      try { withDoc(ifr.contentDocument, () => applyRecipe(recipe)); } catch (e) { console.warn(e); }
+      res();
+    };
+    ifr.srcdoc = preparedOriginal();
+  });
+}
+const single = i => Object.fromEntries(ASPECTS.map(([k]) => [k, PROPOSALS[i]]));
+let mix = Object.fromEntries(ASPECTS.map(([k]) => [k, 0]));
+const recipeFromMix = () => Object.fromEntries(ASPECTS.map(([k]) => [k, PROPOSALS[mix[k]]]));
+const scaler = new ResizeObserver(entries => entries.forEach(e =>
+  e.target.style.setProperty('--s', (e.contentRect.width / 1000).toFixed(4))));
+
+function buildGallery() {
+  const grid = $('#gGrid');
+  PROPOSALS.forEach((p, i) => {
+    const card = document.createElement('button');
+    card.className = 'g-card'; card.type = 'button'; card.dataset.i = i;
+    card.innerHTML = `<div class="g-thumb"><iframe tabindex="-1" title="${p.name}"></iframe></div>
+      <div class="g-meta"><b>${p.name}</b><span>${p.desc}</span>
+      <div class="g-dots">${[p.pal.bg, p.pal.surface, p.pal.text, p.pal.accent, p.pal.accent2].map(c => `<i style="background:${c}"></i>`).join('')}</div>
+      <div class="g-uses"></div></div>`;
+    card.onclick = () => { ASPECTS.forEach(([k]) => { mix[k] = i; }); syncMix(); };
+    grid.appendChild(card);
+    scaler.observe($('.g-thumb', card));
+  });
+  scaler.observe($('.g-prev'));
+  const box = $('#gMix');
+  ASPECTS.forEach(([k, label]) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<label>${label} מתוך</label><div class="ctl"><select data-aspect="${k}">${PROPOSALS.map((p, i) => `<option value="${i}">${p.name}</option>`).join('')}</select></div>`;
+    $('select', row).onchange = e => { mix[k] = +e.target.value; syncMix(); };
+    box.appendChild(row);
+  });
+}
+let mixTimer = null, galleryKey = null;
+function syncMix() {
+  $$('#gMix select').forEach(sel => { sel.value = mix[sel.dataset.aspect]; });
+  $$('.g-card').forEach(c => {
+    const i = +c.dataset.i;
+    const uses = ASPECTS.filter(([k]) => mix[k] === i).map(a => a[1]);
+    c.classList.toggle('on', uses.length > 0);
+    $('.g-uses', c).innerHTML = uses.length === ASPECTS.length ? '<em>כל העיצוב</em>' : uses.map(u => `<em>${u}</em>`).join('');
+  });
+  clearTimeout(mixTimer);
+  mixTimer = setTimeout(() => renderVariant($('#mixFrame'), recipeFromMix()), 120);
+}
+function openGallery() {
+  if (!doc) return;
+  finishTextEdit();
+  $('#gallery').hidden = false;
+  const key = original + '\u0000' + baseUrl;
+  if (galleryKey !== key) {
+    galleryKey = key;
+    $$('#gGrid iframe').forEach((f, i) => renderVariant(f, single(i)));
+  }
+  syncMix();
+}
+$('#btnIdeas').onclick = openGallery;
+$('#gClose').onclick = () => { $('#gallery').hidden = true; };
+$('#gApply').onclick = async () => {
+  const rec = recipeFromMix();
+  const names = [...new Set(ASPECTS.map(([k]) => PROPOSALS[mix[k]].name))].join(' + ');
+  const wasFluid = !!theme.fluid;
+  finishTextEdit(); clearSelection();
+  checkpoint('עיצוב מוכן: ' + names);
+  await render(preparedOriginal());
+  applyRecipe(rec);
+  if (wasFluid) { enableFluid(); writeTheme(); }
+  refreshGlobalUI(); changed();
+  $('#gallery').hidden = true;
+  showTab('global');
+  toast('העיצוב הוחל. אפשר לכוונן כל פרט בלשוניות');
+};
+
+// ------------------------------------------------------------------
+// help
+// ------------------------------------------------------------------
+function openHelp(id) {
+  const d = $('#helpDlg');
+  if (!d.open) d.showModal();
+  if (!id) { d.scrollTop = 0; return; }
+  const t = $('#' + id, d);
+  if (!t) return;
+  const det = t.tagName === 'SUMMARY' ? t.parentElement : t.nextElementSibling;
+  if (det && det.tagName === 'DETAILS') det.open = true;
+  t.scrollIntoView({ block: 'start' });
+}
+$('#btnHelp').onclick = () => openHelp();
+$('#btnCloseHelp').onclick = () => $('#helpDlg').close();
+$$('.help-nav a').forEach(a => a.addEventListener('click', e => { e.preventDefault(); openHelp(a.getAttribute('href').slice(1)); }));
+$$('[data-help]').forEach(g => {
+  const q = document.createElement('button');
+  q.className = 'q'; q.type = 'button'; q.textContent = '?'; q.title = 'הסבר על החלק הזה';
+  q.onclick = e => { e.stopPropagation(); openHelp(g.dataset.help); };
+  const h = $(':scope > h3', g);
+  (h || g).appendChild(q);
+});
 
 // ------------------------------------------------------------------
 // misc UI
@@ -1384,13 +2173,14 @@ $('#btnResume').onclick = async () => {
   doctype = s.doctype || doctype;
   await render(s.current);
   $('#loader').hidden = true;
-  ['#btnExport', '#btnCompare'].forEach(x => $(x).disabled = false);
+  ['#btnExport', '#btnCompare', '#btnIdeas'].forEach(x => $(x).disabled = false);
   updateUndoButtons();
   toast('העבודה הקודמת נטענה');
 };
 
 // shortcuts
 function handleShortcuts(e) {
+  if (e.key === 'Escape' && !$('#gallery').hidden) { $('#gallery').hidden = true; return; }
   if ($('[data-dz-edit]', doc || document)) return;
   const tag = (e.target.tagName || '').toUpperCase();
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) && e.target.ownerDocument === document) return;
@@ -1405,6 +2195,7 @@ $('#btnRedo').onclick = redo;
 // start
 fillFontSelects();
 buildThemes();
+buildGallery();
 showLoader();
 })();
 </script>

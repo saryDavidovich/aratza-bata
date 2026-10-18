@@ -12,3 +12,4 @@ Pillow
 pillow-heif
 yt-dlp
 imageio-ffmpeg
+python-docx

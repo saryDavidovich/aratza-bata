@@ -217,6 +217,7 @@ button:hover{background:#1d4ed8}
 <p><a href="/imagechat" style="color:#2563eb;text-decoration:none;font-weight:bold">🎨 צ'אט תמונות עם Gemini (יצירת תמונות + שליחה למייל) ←</a></p>
 <p><a href="/videochat" style="color:#2563eb;text-decoration:none;font-weight:bold">🎬 צ'אט סרטונים עם Gemini (יצירת סרטונים + העלאת קבצים + שליחה למייל) ←</a></p>
 <p><a href="/youtube-download" style="color:#2563eb;text-decoration:none;font-weight:bold">⬇️ הורדת סרטון/אודיו מיוטיוב ←</a></p>
+<p><a href="/compare" style="color:#2563eb;text-decoration:none;font-weight:bold">⚖️ השוואת תמלול מקצועי - AlefBot מול OpenAI במקביל ←</a></p>
 <p><a href="/designer" style="color:#2563eb;text-decoration:none;font-weight:bold">🖌️ שולחן עיצוב - שינוי עיצוב של עמודים קיימים ←</a></p>
 {% if message %}<div class="msg {{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}
 <form method="post" action="/run" enctype="multipart/form-data">
@@ -726,6 +727,14 @@ init_videochat(
 from designer import init_designer  # noqa: E402
 
 init_designer(app)
+
+
+# ============================================================
+# השוואת תמלול מקצועי - AlefBot מול OpenAI במקביל - transcompare.py
+# ============================================================
+from transcompare import init_transcompare  # noqa: E402
+
+init_transcompare(app, require_access=_require_access, default_email=LAB_DEFAULT_EMAIL)
 
 
 if __name__ == '__main__':

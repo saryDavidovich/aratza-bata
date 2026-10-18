@@ -11,6 +11,10 @@
      ואחריו שלב תיקון במודל חושב (אפשרות 2): מתקן מילים שנשמעו לא נכון וציטוטי
      פסוקים, בלי לשנות תוכן. התיקון נעשה קטע-קטע (עם הקטע שלפני ואחרי כהקשר),
      כך שהחלוקה לקטעים נשמרת בדיוק.
+  4. קריאה שלישית - מודל ששומע את השמע של כל קטע (Gemini, LAB_THIRD_MODEL) ומתאים
+     את הטקסט אחרי התיקון למה שנאמר בפועל: משנה רק מה שנשמע בבירור אחרת, ולא כותב
+     מילה שלא נאמרה (גם אם התיקון "השלים" פסוק). שינוי של יותר מרבע מהקטע נדחה
+     בקוד, ונשאר הטקסט של התיקון. בדף מסומן מה השתנה מול העמודה הקודמת.
 
 חלוקה לקטעים: ההקלטה נחתכת לקטעים של כ-40 שניות, בנקודה השקטה ביותר שבין 30
 ל-50 שניות (כדי לא לחתוך באמצע מילה). כל קטע של OpenAI מתומלל בנפרד, ולכן הוא
@@ -60,14 +64,17 @@ COMPARE_DB = os.path.join(BASE_DIR, 'compare.db')
 ALEFBOT_BASE = 'https://alef-bot.top/api/v1'
 OPENAI_MODEL = os.environ.get('LAB_OPENAI_TRANSCRIBE_MODEL', 'gpt-transcribe')
 FIX_MODEL = os.environ.get('LAB_OPENAI_FIX_MODEL', 'gpt-5')
+THIRD_MODEL = os.environ.get('LAB_THIRD_MODEL', 'gemini-3.1-pro-preview')
+THIRD_MIN_SIMILARITY = 0.75   # קריאה שלישית ששינתה יותר מזה - נדחית (נשאר הטקסט של התיקון)
 MAX_FILE_SIZE = 300 * 1024 * 1024
 SEG_TARGET, SEG_MIN, SEG_MAX = 40, 30, 50     # שניות
 WORKERS = 6
 
-ENGINES = ('alefbot', 'openai', 'plus')
+ENGINES = ('alefbot', 'openai', 'plus', 'third')
 ENGINE_NAMES = {'alefbot': 'AlefBot (התמלול המקצועי היום)',
                 'openai': 'OpenAI רגיל',
-                'plus': 'OpenAI עם רקע + תיקון'}
+                'plus': 'OpenAI עם רקע + תיקון',
+                'third': 'קריאה שלישית (מול השמע)'}
 LANG_NAMES = {'he': 'עברית', 'yi': 'אידיש', 'en': 'אנגלית'}
 
 BASIC_PROMPT = 'תמלול שיחה או שיעור בעברית.'
@@ -95,6 +102,64 @@ FIX_INSTRUCTIONS = """אתה מגיה תמלול אוטומטי של הקלטה 
 החזר אך ורק את הטקסט המתוקן של הקטע לתיקון, בלי הסברים ובלי מירכאות סביבו."""
 
 
+THIRD_INSTRUCTIONS = """לפניך קטע שמע, ותמלול שלו שכבר עבר הגהה.
+המשימה: להאזין לשמע ולבדוק את התמלול מילה אחר מילה מול מה שנאמר בפועל.
+
+כללים מחייבים:
+- שנה מילה רק אם שומעים בבירור שנאמרה מילה אחרת. אם לא ברור - השאר כמו שהוא.
+- הוסף מילה רק אם היא נאמרה בבירור וחסרה בתמלול. מחק מילה רק אם בבירור לא נאמרה.
+- לעולם אל תכתוב מילה שלא נאמרה בשמע, גם אם היא "מתאימה" לפסוק או להקשר.
+  אם ההגהה השלימה או שינתה ציטוט למילים שהדובר לא אמר - החזר למה שנאמר בפועל.
+- אל תשנה סגנון, סדר מילים או פיסוק שאינם קשורים לטעות שמיעה. אל תסכם ואל תקצר.
+- הקטע שלפני והקטע שאחרי ניתנים רק כהקשר - אל תחזיר אותם.
+
+החזר אך ורק את התמלול המתוקן של הקטע, בלי הסברים."""
+
+
+def _third_seg(gclient, wav_path, prev_text, text, next_text):
+    """קריאה שלישית: מודל שמקבל את השמע של הקטע ואת הטקסט אחרי התיקון, ומתאים
+    אותו למה שנאמר. מחזיר (טקסט, הערה). שינוי גדול מדי נדחה בקוד."""
+    from google.genai import types as gtypes
+    if not text.strip():
+        return text, ''
+    with open(wav_path, 'rb') as fh:
+        audio = fh.read()
+    msg = (f'{THIRD_INSTRUCTIONS}\n\nהקטע שלפני (הקשר בלבד):\n{prev_text or "(אין)"}\n\n'
+           f'התמלול לבדיקה מול השמע:\n{text}\n\nהקטע שאחרי (הקשר בלבד):\n{next_text or "(אין)"}')
+    last = None
+    for attempt in range(3):
+        try:
+            r = gclient.models.generate_content(
+                model=THIRD_MODEL, contents=[gtypes.Part.from_bytes(data=audio, mime_type='audio/wav'), msg])
+            out = (r.text or '').strip()
+            if not out:
+                return text, 'ריק - נשאר הטקסט הקודם'
+            ratio = difflib.SequenceMatcher(None, text.split(), out.split(), autojunk=False).ratio()
+            if ratio < THIRD_MIN_SIMILARITY:
+                return text, f'נדחה: שינה יותר מדי ({round(ratio * 100)}% דמיון)'
+            return out, ''
+        except Exception as e:
+            last = e
+            log.warning(f'compare third attempt {attempt + 1}: {e}')
+            time.sleep(5)
+    raise RuntimeError(f'הקריאה השלישית נכשלה: {last}')
+
+
+def diff_html(before, after):
+    """HTML של after, עם סימון: מילים שנוספו/הוחלפו בירוק, ומילים שנמחקו - מחוקות באדום."""
+    a, b = (before or '').split(), (after or '').split()
+    out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if op == 'equal':
+            out.append(escape(' '.join(b[j1:j2])))
+            continue
+        if i2 > i1:
+            out.append(f'<del style="color:#b91c1c">{escape(" ".join(a[i1:i2]))}</del>')
+        if j2 > j1:
+            out.append(f'<ins style="background:#dcfce7;text-decoration:none">{escape(" ".join(b[j1:j2]))}</ins>')
+    return ' '.join(out)
+
+
 # ---------------------------------------------------------------- DB
 
 _lock = threading.Lock()
@@ -107,6 +172,7 @@ _COLS = {
 for _e in ENGINES:
     _COLS.update({f'{_e}_status': 'TEXT', f'{_e}_text': 'TEXT', f'{_e}_error': 'TEXT', f'{_e}_secs': 'REAL'})
 _COLS['plus_raw'] = 'TEXT'
+_COLS['third_log'] = 'TEXT'
 
 
 def _db():
@@ -391,9 +457,27 @@ def _process(cid, src_path, link):
                                                        raw[i + 1] if i + 1 < len(raw) else '', row['fix_effort'] or 'high'),
                                    range(len(raw))))
 
+        def run_third():
+            fixed = results.get('plus')
+            if fixed is None:
+                raise RuntimeError('אין טקסט מהתיקון (העמודה המשופרת נכשלה)')
+            from google import genai
+            gclient = genai.Client(api_key=os.environ.get('GOOGLE_API_KEY'))
+            with ThreadPoolExecutor(WORKERS) as ex:
+                res = list(ex.map(lambda i: _third_seg(gclient, seg_paths[i], fixed[i - 1] if i else '', fixed[i],
+                                                       fixed[i + 1] if i + 1 < len(fixed) else ''),
+                                  range(len(fixed))))
+            notes = {i: n for i, (_, n) in enumerate(res) if n}
+            _update(cid, third_log=json.dumps(notes, ensure_ascii=False))
+            return [t for t, _ in res]
+
+        def plus_then_third():
+            timed('plus', run_plus)
+            timed('third', run_third)
+
         threads = [threading.Thread(target=timed, args=('alefbot', lambda: _run_alefbot(wav, row['output_language']))),
                    threading.Thread(target=timed, args=('openai', run_openai)),
-                   threading.Thread(target=timed, args=('plus', run_plus))]
+                   threading.Thread(target=plus_then_third)]
         for t in threads:
             t.start()
         for t in threads:
@@ -457,11 +541,24 @@ def summary(row):
                   'price': _price(n, row.get('duration_sec'))}
     out['sim'] = {'alefbot_openai': similarity(out['alefbot']['text'], out['openai']['text']),
                   'alefbot_plus': similarity(out['alefbot']['text'], out['plus']['text']),
-                  'openai_plus': similarity(out['openai']['text'], out['plus']['text'])}
+                  'openai_plus': similarity(out['openai']['text'], out['plus']['text']),
+                  'plus_third': similarity(out['plus']['text'], out['third']['text'])}
+    try:
+        notes = json.loads(row.get('third_log') or '{}')
+    except ValueError:
+        notes = {}
     try:
         out['segments'] = json.loads(row.get('segments') or '[]')
     except ValueError:
         out['segments'] = []
+    changed = 0
+    for i, seg in enumerate(out['segments']):
+        seg['third_html'] = diff_html(seg.get('plus'), seg.get('third')) if seg.get('third') else ''
+        seg['third_note'] = notes.get(str(i), '')
+        if seg.get('third') and seg.get('third') != seg.get('plus'):
+            changed += 1
+    out['third_changed'] = changed
+    out['third_rejected'] = sum(1 for v in notes.values() if v.startswith('נדחה'))
     # רוחב עמודה יחסי לאורך הטקסט - כדי ששלוש העמודות ייגמרו בערך באותו גובה (מינימום 20%)
     lens = {n: max(1, out[n]['chars']) if out[n]['status'] == 'done' else 1 for n in ENGINES}
     total = sum(lens.values())
@@ -528,18 +625,23 @@ def _send_email(row):
         rows += (f'<tr><td style="padding:6px;border:1px solid #cfe0fb;color:#43546b;font-size:12px;vertical-align:top;'
                  f'white-space:nowrap">{_fmt_secs(seg["start"])}</td>'
                  + ''.join(f'<td style="padding:6px 8px;border:1px solid #cfe0fb;vertical-align:top;line-height:1.7;'
-                           f'font-size:14px;text-align:justify;background:#ffffff">{escape(seg.get(n) or "")}</td>'
+                           f'font-size:14px;text-align:justify;background:#ffffff">'
+                           + (seg['third_html'] if n == 'third' and seg.get('third_html') else escape(seg.get(n) or ''))
+                           + '</td>'
                            for n in ENGINES) + '</tr>')
     sim = s['sim']
     pct = lambda v: f'{v}%' if v is not None else '-'
     link = os.environ.get('APP_BASE_URL', '').rstrip('/')
     view = f'<p><a href="{link}/compare/{row["id"]}">לצפייה בדף עם נגן</a> (צריך קוד גישה)</p>' if link else ''
     html = (f'<div dir="rtl" style="font-family:Arial,sans-serif;max-width:1200px;margin:0 auto;background:#eef4fb;padding:16px">'
-            f'<h2 style="color:#0a58ca;margin:0 0 6px">השוואת תמלול - שלושה מנועים</h2>'
+            f'<h2 style="color:#0a58ca;margin:0 0 6px">השוואת תמלול</h2>'
             f'<div style="color:#43546b;font-size:14px">{escape(row["source"] or "")} · אורך {_fmt_secs(row["duration_sec"])} · '
             f'{len(s["segments"])} קטעים</div>'
             f'<div style="color:#43546b;font-size:14px">דמיון: AlefBot מול OpenAI רגיל {pct(sim["alefbot_openai"])} · '
-            f'AlefBot מול המשופר {pct(sim["alefbot_plus"])} · רגיל מול המשופר {pct(sim["openai_plus"])}</div>{view}'
+            f'AlefBot מול המשופר {pct(sim["alefbot_plus"])} · רגיל מול המשופר {pct(sim["openai_plus"])}</div>'
+            f'<div style="color:#43546b;font-size:14px">קריאה שלישית שינתה {s["third_changed"]} קטעים'
+            + (f', {s["third_rejected"]} נדחו כי שינו יותר מדי' if s['third_rejected'] else '') +
+            f' · ירוק = נוסף/הוחלף מול התיקון, אדום מחוק = הוסר</div>{view}'
             f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:12px">'
             f'<tr><th style="width:44px;border:1px solid #cfe0fb;background:#e3edfc">זמן</th>{head_cells}</tr>{rows}</table></div>')
     msg = Mail(from_email=Email(os.environ.get('SENDGRID_FROM_EMAIL', ''), 'מעבדת בדיקות'),
@@ -585,6 +687,9 @@ button{margin-top:18px;padding:12px 28px;background:#0a58ca;color:#fff;border:no
 .t:hover{color:#0a58ca;text-decoration:underline}
 .c{white-space:pre-wrap;line-height:1.8;font-size:15px;text-align:justify}
 .row-on{background:#fff8d6 !important}
+.c ins{background:#dcfce7;text-decoration:none;border-radius:3px}
+.c del{color:#b91c1c;font-size:.85em}
+.tn{font-size:12px;color:#92400e;margin-top:4px}
 @media (max-width:760px){.grid{grid-template-columns:1fr}.hd{position:static}.grid > div.c:before{content:attr(data-n);display:block;font-size:11px;color:#43546b}}
 table{width:100%;border-collapse:collapse;font-size:14px}
 td,th{border-bottom:1px solid #e3ebf6;padding:8px;text-align:right}
@@ -595,8 +700,8 @@ a{color:#0a58ca}
 <div class="player"><b>{{ row.source }}</b><audio id="aud" controls preload="metadata" src="/compare/audio/{{ row.id }}?access_code={{ access_code }}"></audio></div>
 {% endif %}
 <div class="wrap">
-<h2>השוואת תמלול - שלושה מנועים</h2>
-<p class="note">AlefBot (כמו היום) · OpenAI רגיל · OpenAI עם רקע ומילים צפויות + תיקון במודל חושב. מחולק לקטעים לפי ההקלטה. <a href="/compare?access_code={{ access_code }}">השוואה חדשה</a> · <a href="/">חזרה למעבדה</a></p>
+<h2>השוואת תמלול</h2>
+<p class="note">AlefBot (כמו היום) · OpenAI רגיל · OpenAI עם רקע ומילים צפויות + תיקון במודל חושב · קריאה שלישית מול השמע. מחולק לקטעים לפי ההקלטה. <a href="/compare?access_code={{ access_code }}">השוואה חדשה</a> · <a href="/">חזרה למעבדה</a></p>
 {% if message %}<div class="{{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}
 
 {% if row %}
@@ -604,6 +709,7 @@ a{color:#0a58ca}
     <div class="note">נוצר {{ row.created_at }} · אורך {{ fmt(row.duration_sec) }} · {{ s.segments|length }} קטעים · שפה {{ langs.get(row.language, row.language) }}
       {% if refresh %} · <b>עדיין רץ - הדף מתרענן לבד</b>{% endif %}</div>
     <div class="note">דמיון: AlefBot מול OpenAI רגיל {{ pct(s.sim.alefbot_openai) }} · AlefBot מול המשופר {{ pct(s.sim.alefbot_plus) }} · רגיל מול המשופר {{ pct(s.sim.openai_plus) }}</div>
+    <div class="note">קריאה שלישית: שינתה {{ s.third_changed }} קטעים{% if s.third_rejected %}, {{ s.third_rejected }} נדחו כי שינו יותר מדי{% endif %}. <ins style="background:#dcfce7;text-decoration:none">ירוק</ins> = נוסף/הוחלף מול התיקון, <del style="color:#b91c1c">אדום מחוק</del> = הוסר.</div>
   </div>
   <div class="grid" id="grid">
     <div class="hd">זמן</div>
@@ -612,7 +718,7 @@ a{color:#0a58ca}
       {% elif e.status == 'error' %}<span style="color:#b91c1c">שגיאה: {{ e.error }}</span>{% else %}רץ...{% endif %}</small></div>{% endfor %}
     {% for seg in s.segments %}
       <div class="t" data-start="{{ seg.start }}" data-end="{{ seg.end }}" title="לנגן מכאן">▶ {{ fmt(seg.start) }}</div>
-      {% for n in engines %}<div class="c" data-n="{{ names[n] }}" data-start="{{ seg.start }}">{{ seg.get(n, '') }}</div>{% endfor %}
+      {% for n in engines %}<div class="c" data-n="{{ names[n] }}" data-start="{{ seg.start }}">{% if n == 'third' and seg.third_html %}{{ seg.third_html|safe }}{% if seg.third_note %}<div class="tn">{{ seg.third_note }}</div>{% endif %}{% else %}{{ seg.get(n, '') }}{% endif %}</div>{% endfor %}
     {% endfor %}
   </div>
   <script>
@@ -686,7 +792,7 @@ def init_transcompare(app, *, require_access, default_email):
     def render(**kw):
         base = dict(message=None, ok=True, row=None, s=None, refresh=False, history=None, access_code='',
                     default_email=default_email, fmt=_fmt_secs, names=ENGINE_NAMES, langs=LANG_NAMES,
-                    st=STATUS_NAMES, engines=ENGINES, cols='1fr 1fr 1fr', default_context=DEFAULT_CONTEXT,
+                    st=STATUS_NAMES, engines=ENGINES, cols='1fr 1fr 1fr 1fr', default_context=DEFAULT_CONTEXT,
                     default_keywords=DEFAULT_KEYWORDS, pct=lambda v: f'{v}%' if v is not None else '-')
         base.update(kw)
         return render_template_string(PAGE_HTML, **base)

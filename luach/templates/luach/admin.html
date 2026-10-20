@@ -1,0 +1,117 @@
+{% extends 'luach/base.html' %}
+{% block title %}ניהול · לוח המודעות{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<h1 class="page-title">ניהול</h1>
+<nav class="tabs">
+  <a href="?tab=paper" class="{{ 'on' if tab == 'paper' }}">העלאה מהעיתון</a>
+  <a href="?tab=ads" class="{{ 'on' if tab == 'ads' }}">מודעות</a>
+  <a href="?tab=requests" class="{{ 'on' if tab == 'requests' }}">בקשות{% if pending_count %} ({{ pending_count }}){% endif %}</a>
+  <a href="?tab=links" class="{{ 'on' if tab == 'links' }}">קישורים</a>
+</nav>
+
+{% if tab == 'paper' %}
+<form class="panel stack" method="post" action="{{ url_for('luach.admin_paper') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>העלאה מהעיתון</h2>
+  <p class="sub">הגליון והתאריך נשמרים בין מודעה למודעה, כך שאפשר להעלות גליון שלם ברצף.</p>
+  <div class="grid3">
+    <label class="field"><span>עיתון</span><input type="text" name="source_paper" list="papers" value="{{ request.args.paper or '' }}" required></label>
+    <label class="field"><span>גליון</span><input type="text" name="gilyon" value="{{ request.args.gilyon or '' }}" placeholder="למשל: פרשת וירא"></label>
+    <label class="field"><span>תאריך</span><input type="date" name="published_date" value="{{ request.args.date or today }}"></label>
+  </div>
+  <div class="grid3">
+    <label class="field"><span>סוג עסקה</span><select name="deal_type">{% for k, v in DEAL_TYPES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+    <label class="field"><span>ריכוז <i>*</i></span><input type="text" name="city" list="cities" required></label>
+    <label class="field"><span>שכונה</span><input type="text" name="neighborhood"></label>
+  </div>
+  <label class="field"><span>כותרת <i>*</i></span><input type="text" name="title" required></label>
+  <div class="grid3">
+    <label class="field"><span>מחיר (₪)</span><input type="number" name="price" min="0"></label>
+    <label class="field"><span>חדרים</span><input type="number" name="rooms" min="0" step="0.5"></label>
+    <label class="field"><span>קומה</span><input type="text" name="floor"></label>
+    <label class="field"><span>שטח (מ״ר)</span><input type="number" name="size_sqm" min="0"></label>
+    <label class="field"><span>איש קשר</span><input type="text" name="contact_name"></label>
+    <label class="field"><span>טלפון <i>*</i></span><input type="tel" name="phone" required></label>
+  </div>
+  <label class="field"><span>תיאור</span><textarea name="description"></textarea></label>
+  <div class="grid2">
+    <label class="field"><span>תמונה</span><input type="file" name="image" accept="image/*"></label>
+    <label class="field"><span>הדגשה</span><select name="highlight">{% for k, v in HIGHLIGHTS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+  </div>
+  <div><button class="btn dark">העלאה ללוח</button></div>
+</form>
+<datalist id="papers">{% for p in PAPERS %}<option value="{{ p }}">{% endfor %}</datalist>
+<datalist id="cities">{% for c in CITIES %}<option value="{{ c }}">{% endfor %}</datalist>
+{% if recent %}
+<section class="panel" style="margin-top:18px"><h2>הועלו לאחרונה מהעיתון</h2>
+  <div class="list" style="margin-top:10px">{% for a in recent %}
+    <div class="item"><div class="grow"><div class="t">{{ a.title }}</div><div class="m">{{ a.source_paper }} · {{ a.gilyon }} · {{ a.city }} · {{ a.price|shekel }}</div></div></div>
+  {% endfor %}</div></section>
+{% endif %}
+
+{% elif tab == 'ads' %}
+<div class="panel">
+  <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    <input type="hidden" name="tab" value="ads">
+    <input type="search" name="q" value="{{ q }}" placeholder="חיפוש לפי כותרת, ריכוז, טלפון..." style="flex:1;min-width:200px">
+    <button class="btn">חיפוש</button>
+  </form>
+  {% if sample_count %}
+  <form method="post" action="{{ url_for('luach.admin_delete_samples') }}" data-confirm="למחוק את כל מודעות וקישורי הדוגמה?" style="margin-bottom:14px">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small danger">מחיקת כל הדוגמאות ({{ sample_count }})</button></form>
+  {% endif %}
+  <div class="scroll-x"><table class="t">
+    <tr><th>מודעה</th><th>ריכוז</th><th>מקור</th><th>הדגשה</th><th></th></tr>
+    {% for a in ads %}
+    <tr>
+      <td><b>{{ a.title }}</b><br><span class="m" style="color:var(--muted);font-size:13px">{{ a.deal_label }} · {{ a.price|shekel }} · {{ a.phone }}</span></td>
+      <td>{{ a.city }}</td>
+      <td>{{ {'user': 'גולש', 'paper': a.source_paper or 'עיתון', 'sample': 'דוגמה'}[a.origin] }}</td>
+      <td><form method="post" action="{{ url_for('luach.admin_highlight', ad_id=a.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="q" value="{{ q }}">
+        <select name="highlight">{% for k, v in HIGHLIGHTS.items() %}<option value="{{ k }}" {{ 'selected' if a.highlight == k }}>{{ v }}</option>{% endfor %}</select>
+        <button class="btn small">שמירה</button></form></td>
+      <td><form method="post" action="{{ url_for('luach.delete_ad', ad_id=a.id) }}" data-confirm="למחוק את המודעה?">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ url_for('luach.admin', tab='ads', q=q) }}">
+        <button class="btn small danger">מחיקה</button></form></td>
+    </tr>
+    {% else %}<tr><td colspan="5">לא נמצאו מודעות.</td></tr>{% endfor %}
+  </table></div>
+</div>
+
+{% elif tab == 'requests' %}
+<div class="list">
+  {% for r in reqs %}
+  <div class="item">
+    <div class="grow">
+      <div class="t">{% if r.kind == 'extra_links' %}תוספת {{ r.slots or 5 }} קישורים{% else %}{{ HIGHLIGHTS[r.highlight] }}: {{ r.ad_title }}{% endif %}</div>
+      <div class="m">₪{{ r.amount }} · {{ r.requester_name }} · <a href="tel:{{ r.phone }}">{{ r.phone }}</a> · {{ r.created_at[:16]|replace('T', ' ') }}</div>
+    </div>
+    <span class="status {{ r.status }}">{{ {'pending': 'ממתינה', 'approved': 'אושרה', 'rejected': 'נדחתה'}[r.status] }}</span>
+    {% if r.status == 'pending' %}
+    <form method="post" action="{{ url_for('luach.admin_request', req_id=r.id, action='approve') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small dark">אישור (שולם)</button></form>
+    <form method="post" action="{{ url_for('luach.admin_request', req_id=r.id, action='reject') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small danger">דחייה</button></form>
+    {% endif %}
+  </div>
+  {% else %}<div class="panel"><p class="sub" style="margin:0">אין בקשות.</p></div>{% endfor %}
+</div>
+
+{% elif tab == 'links' %}
+<div class="scroll-x"><table class="t">
+  <tr><th>קישור</th><th>משווק</th><th>תגובות</th><th>מצב</th><th></th></tr>
+  {% for l in links %}
+  <tr>
+    <td><b>{{ l.title }}</b><br><a href="{{ l.url }}" target="_blank" rel="noopener" dir="ltr" style="font-size:13px">{{ l.url[:50] }}</a></td>
+    <td>{{ l.marketer_name }}<br><span style="color:var(--muted);font-size:13px">{{ STORES.get(l.store, 'אחר') }}</span></td>
+    <td>👍 {{ l.likes }} · 👎 {{ l.dislikes }}</td>
+    <td><span class="status {{ l.status }}">{{ 'מוצג' if l.status == 'active' else 'מוסתר' }}</span></td>
+    <td>
+      <form method="post" action="{{ url_for('luach.admin_link', link_id=l.id, action='show' if l.status == 'hidden' else 'hide') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small">{{ 'הצגה' if l.status == 'hidden' else 'הסתרה' }}</button></form>
+      <form method="post" action="{{ url_for('luach.admin_link', link_id=l.id, action='delete') }}" data-confirm="למחוק את הקישור?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small danger">מחיקה</button></form>
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="5">אין קישורים.</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

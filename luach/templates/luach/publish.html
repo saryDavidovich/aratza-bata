@@ -1,0 +1,66 @@
+{% extends 'luach/base.html' %}
+{% block title %}פרסום מודעה · לוח המודעות{% endblock %}
+{% block content %}
+<h1 class="page-title">פרסום מודעה</h1>
+<p class="page-sub">הפרסום חינם ועולה ללוח מיד. אפשר להוסיף הדגשה שתבלוט מעל כולם.</p>
+{% if request.args.ok %}
+  <div class="flash ok">המודעה פורסמה ועלתה ללוח.
+    {% if request.args.hl in ['color', 'motion'] %} בקשת ההדגשה ({{ HIGHLIGHTS[request.args.hl] }}) נשלחה. ניצור איתך קשר לתשלום, וההדגשה תופעל מיד אחרי האישור.{% endif %}
+    <a href="{{ url_for('luach.board') }}">לצפייה בלוח</a></div>
+{% endif %}
+<div class="two" style="margin-top:18px">
+  <form class="panel stack" id="pub-form" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="field"><span>כותרת <i>*</i></span><input type="text" name="title" maxlength="120" required value="{{ form.title }}" placeholder="למשל: 4 חדרים עם מרפסת סוכה"></label>
+    <div class="grid3">
+      <label class="field"><span>סוג עסקה</span>
+        <select name="deal_type">{% for k, v in DEAL_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if form.deal_type == k }}>{{ v }}</option>{% endfor %}</select></label>
+      <label class="field"><span>ריכוז <i>*</i></span><input type="text" name="city" list="cities" required value="{{ form.city }}" placeholder="עיר"></label>
+      <label class="field"><span>שכונה</span><input type="text" name="neighborhood" value="{{ form.neighborhood }}"></label>
+    </div>
+    <div class="grid2">
+      <label class="field"><span>מחיר (₪)</span><input type="number" name="price" min="0" inputmode="numeric" value="{{ form.price }}"></label>
+      <label class="field"><span>חדרים</span><input type="number" name="rooms" min="0" step="0.5" value="{{ form.rooms }}"></label>
+      <label class="field"><span>קומה</span><input type="text" name="floor" value="{{ form.floor }}"></label>
+      <label class="field"><span>שטח (מ״ר)</span><input type="number" name="size_sqm" min="0" value="{{ form.size_sqm }}"></label>
+      <label class="field"><span>איש קשר</span><input type="text" name="contact_name" value="{{ form.contact_name or (user.name if user) }}"></label>
+      <label class="field"><span>טלפון <i>*</i></span><input type="tel" name="phone" required value="{{ form.phone }}" placeholder="05X-XXXXXXX"></label>
+    </div>
+    <label class="field"><span>תיאור</span><textarea name="description" maxlength="1500">{{ form.description }}</textarea></label>
+    <label class="field"><span>תמונה (לא חובה)</span><input type="file" name="image" accept="image/*"></label>
+
+    <div class="field"><span>הדגשה</span>
+      <div class="hl-pick">
+        <label><input type="radio" name="highlight" value="none" {{ 'checked' if (form.highlight or 'none') == 'none' }}><b>רגילה</b><span class="p">חינם</span><span>מופיעה במסלול כל המודעות</span></label>
+        <label><input type="radio" name="highlight" value="color" {{ 'checked' if form.highlight == 'color' }}><b>הדגשה בצבע</b><span class="p">₪{{ PRICE_COLOR }}</span><span>רקע זהב ומקום במסלול המודגשות</span></label>
+        <label><input type="radio" name="highlight" value="motion" {{ 'checked' if form.highlight == 'motion' }}><b>צבע ותנועה</b><span class="p">₪{{ PRICE_MOTION }}</span><span>צבע זז והילה פועמת, הכי בולט</span></label>
+      </div>
+    </div>
+    <div><button class="btn dark" type="submit">פרסום המודעה</button></div>
+  </form>
+  <aside class="preview-box">
+    <b>כך המודעה תיראה בלוח</b>
+    <div id="preview"></div>
+  </aside>
+</div>
+<datalist id="cities">{% for c in CITIES %}<option value="{{ c }}">{% endfor %}</datalist>
+
+<section class="panel" style="margin-top:22px">
+  <h2>המודעות שלי</h2>
+  {% if my_ads %}
+  <div class="list" style="margin-top:12px">
+    {% for a in my_ads %}
+    <div class="item">
+      <div class="grow"><div class="t">{{ a.title }}</div><div class="m">{{ a.deal_label }} · {{ a.city }} · {{ a.price|shekel }} · {{ a.published_date }}</div></div>
+      <span class="status active">פעילה</span>
+      {% if a.highlight != 'none' %}<span class="status approved">{{ HIGHLIGHTS[a.highlight] }}</span>
+      {% elif a.req_status == 'pending' %}<span class="status pending">בקשת {{ HIGHLIGHTS[a.req_highlight] }} ממתינה</span>
+      {% elif a.req_status == 'rejected' %}<span class="status rejected">ההדגשה לא אושרה</span>{% endif %}
+      <form method="post" action="{{ url_for('luach.delete_ad', ad_id=a.id) }}" data-confirm="למחוק את המודעה?">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small danger">מחיקה</button></form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="sub">עדיין לא פרסמת מודעות.</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'luach/base.html' %}
+{% block title %}התחברות · לוח המודעות{% endblock %}
+{% block content %}
+<div class="auth">
+  <div class="panel">
+  {% if mode == 'login' %}
+    <h1>התחברות</h1>
+    <p class="sub">כדי לפרסם מודעה או להוסיף קישורים.</p>
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next }}">
+      <label class="field"><span>מייל</span><input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" dir="ltr"></label>
+      <label class="field"><span>סיסמה</span><input type="password" name="password" required autocomplete="current-password"></label>
+      <button class="btn dark">התחברות</button>
+    </form>
+    {% if google_client_id %}<div class="or">או</div><div id="gbtn" style="display:flex;justify-content:center"></div>{% endif %}
+    <p class="alt"><a href="{{ url_for('luach.forgot') }}">שכחתי סיסמה</a> · <a href="{{ url_for('luach.register', next=next) }}">הרשמה</a></p>
+  {% elif mode == 'register' %}
+    <h1>הרשמה</h1>
+    <p class="sub">{{ 'נשלח אליך מייל לאימות הכתובת.' if mail_ready else 'פתיחת חשבון לוקחת חצי דקה.' }}</p>
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next }}">
+      <label class="field"><span>שם</span><input type="text" name="name" value="{{ name or '' }}" required autocomplete="name"></label>
+      <label class="field"><span>מייל</span><input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" dir="ltr"></label>
+      <label class="field"><span>סיסמה (8 תווים לפחות)</span><input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+      <button class="btn dark">פתיחת חשבון</button>
+    </form>
+    {% if google_client_id %}<div class="or">או</div><div id="gbtn" style="display:flex;justify-content:center"></div>{% endif %}
+    <p class="alt">כבר רשום? <a href="{{ url_for('luach.login', next=next) }}">התחברות</a></p>
+  {% elif mode == 'forgot' %}
+    <h1>שחזור סיסמה</h1>
+    {% if mail_ready %}
+      <p class="sub">נשלח אליך קישור לבחירת סיסמה חדשה.</p>
+      <form method="post" class="stack">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="field"><span>מייל</span><input type="email" name="email" required dir="ltr"></label>
+        <button class="btn dark">שליחת קישור</button>
+      </form>
+    {% else %}
+      <p class="sub">שחזור סיסמה במייל עדיין לא הופעל באתר. פנה למנהל הלוח.</p>
+    {% endif %}
+    <p class="alt"><a href="{{ url_for('luach.login') }}">חזרה להתחברות</a></p>
+  {% elif mode == 'reset' %}
+    <h1>סיסמה חדשה</h1>
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label class="field"><span>סיסמה חדשה (8 תווים לפחות)</span><input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+      <button class="btn dark">שמירת הסיסמה</button>
+    </form>
+  {% elif mode == 'sent' %}
+    <h1>כמעט סיימנו</h1>
+    <p class="sub">שלחנו קישור אימות אל <b dir="ltr">{{ email }}</b>. לחץ עליו כדי להפעיל את החשבון.</p>
+  {% elif mode == 'sent_reset' %}
+    <h1>בדוק את המייל</h1>
+    <p class="sub">אם הכתובת <b dir="ltr">{{ email }}</b> רשומה, נשלח אליה קישור לבחירת סיסמה חדשה.</p>
+  {% endif %}
+  </div>
+</div>
+{% if google_client_id and mode in ['login', 'register'] %}
+<form id="gform" method="post" action="{{ url_for('luach.google_login') }}" hidden>
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="credential">
+</form>
+<script src="https://accounts.google.com/gsi/client" async onload="
+  google.accounts.id.initialize({client_id: '{{ google_client_id }}', callback: r => { const f = document.getElementById('gform'); f.credential.value = r.credential; f.submit(); }});
+  google.accounts.id.renderButton(document.getElementById('gbtn'), {theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', locale: 'he'});
+"></script>
+{% endif %}
+{% endblock %}

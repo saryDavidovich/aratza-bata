@@ -1,0 +1,77 @@
+{% extends 'luach/base.html' %}
+{% block title %}אזור משווקים · לוח המודעות{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<h1 class="page-title">אזור משווקים</h1>
+<p class="page-sub">הקישורים שלך מופיעים בסרגל הקישורים בלוח. כל 5 תגובות חיוביות נטו פותחות מקום לקישור נוסף.</p>
+
+<section class="panel">
+  <div class="quota">
+    <div class="big">{{ stats.used }} / {{ stats.total }}</div>
+    <div>
+      <b>קישורים בשימוש מתוך המכסה שלך</b>
+      <div class="bar" style="margin-top:8px"><i style="width: {{ (100 * stats.used / stats.total) if stats.total else 0 }}%"></i></div>
+      <div class="parts">
+        <span>בסיס {{ stats.base }}</span><span>מתגובות +{{ stats.from_votes }}</span><span>נרכש +{{ stats.extra }}</span><span>לייקים נטו {{ stats.net }}</span><span>תקרה {{ stats.cap }}</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="cols">
+  <form class="panel stack" method="post" action="{{ url_for('luach.add_link') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>הוספת קישור</h2>
+    {% if stats.used >= stats.total %}<div class="flash err" style="margin:0">המכסה מלאה. אפשר למחוק קישור ישן, לקבל תגובות חיוביות או לרכוש תוספת.</div>{% endif %}
+    <label class="field"><span>כותרת <i>*</i></span><input type="text" name="title" required maxlength="100" placeholder="למשל: מארגני מגירות למטבח"></label>
+    <label class="field"><span>קישור <i>*</i></span><input type="url" name="url" required placeholder="https://..." dir="ltr"></label>
+    <div class="grid2">
+      <label class="field"><span>חנות</span><select name="store">{% for k, v in STORES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+      <label class="field"><span>טלפון</span><input type="tel" name="phone" value="{{ stats.phone }}"></label>
+    </div>
+    <label class="field"><span>שם המשווק (מוצג בלוח)</span><input type="text" name="name" value="{{ stats.name or user.name }}"></label>
+    <label class="field"><span>תיאור קצר</span><input type="text" name="description" maxlength="240"></label>
+    <div><button class="btn dark" {{ 'disabled' if stats.used >= stats.total }}>הוספת הקישור</button></div>
+  </form>
+
+  <div class="stack">
+    <section class="panel">
+      <h2>תוספת מכסה בתשלום</h2>
+      <p class="sub">{{ EXTRA_SLOTS }} קישורים נוספים ב-₪{{ PRICE_EXTRA }}. אחרי שליחת הבקשה ניצור קשר לתשלום, והמכסה תעלה מיד עם האישור.</p>
+      <form method="post" action="{{ url_for('luach.request_extra') }}" class="stack">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="field"><span>טלפון ליצירת קשר</span><input type="tel" name="phone" value="{{ stats.phone }}" required></label>
+        <div><button class="btn gold">בקשת תוספת של {{ EXTRA_SLOTS }} קישורים</button></div>
+      </form>
+    </section>
+    {% if reqs %}
+    <section class="panel">
+      <h2>הבקשות שלי</h2>
+      <div class="list" style="margin-top:10px">
+        {% for r in reqs %}
+        <div class="item"><div class="grow"><div class="t">{{ 'תוספת %d קישורים'|format(r.slots or 5) if r.kind == 'extra_links' else HIGHLIGHTS[r.highlight] ~ ': ' ~ r.ad_title }}</div><div class="m">₪{{ r.amount }} · {{ r.created_at[:10] }}</div></div>
+          <span class="status {{ r.status }}">{{ {'pending': 'ממתינה', 'approved': 'אושרה', 'rejected': 'נדחתה'}[r.status] }}</span></div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</div>
+
+<section class="panel" style="margin-top:22px">
+  <h2>הקישורים שלי</h2>
+  {% if links %}
+  <div class="list" style="margin-top:12px">
+    {% for l in links %}
+    <div class="item">
+      <div class="grow"><div class="t">{{ l.title }}</div><div class="m">{{ STORES.get(l.store, 'אחר') }} · <a href="{{ l.url }}" target="_blank" rel="noopener" dir="ltr">{{ l.url[:48] }}{{ '…' if l.url|length > 48 }}</a></div></div>
+      <span>👍 {{ l.likes }} · 👎 {{ l.dislikes }}</span>
+      <span class="status {{ l.status }}">{{ 'מוצג' if l.status == 'active' else 'הוסתר על ידי המנהל' }}</span>
+      <form method="post" action="{{ url_for('luach.delete_link', link_id=l.id) }}" data-confirm="למחוק את הקישור?">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small danger">מחיקה</button></form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="sub">עדיין לא הוספת קישורים.</p>{% endif %}
+</section>
+{% endblock %}

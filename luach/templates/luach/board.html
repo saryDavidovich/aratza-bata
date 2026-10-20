@@ -1,0 +1,63 @@
+{% extends 'luach/base.html' %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>כל לוחות הנדל״ן של הציבור החרדי, במקום אחד</h1>
+    <p>מכירה, השכרה, נופש ומסחרי מכל הגליונות ומכל הריכוזים, וגם מודעות שפורסמו כאן ישירות. הפרסום חינם.</p>
+    <div class="acts">
+      <a class="btn dark" href="{{ url_for('luach.publish') }}">פרסום מודעה בחינם</a>
+      <a class="btn" href="#filters">חיפוש מודעה</a>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>{{ data.stats.ads }}</b><span>מודעות</span></div>
+    <div class="stat"><b>{{ data.stats.cities }}</b><span>ריכוזים</span></div>
+    <div class="stat"><b>{{ data.stats.papers }}</b><span>גליונות</span></div>
+  </div>
+</section>
+
+<section class="filters" id="filters" aria-label="סינון מודעות">
+  <div class="deal-btns" role="group" aria-label="סוג עסקה">
+    <button type="button" class="on" data-deal="">הכל</button>
+    {% for k, v in DEAL_TYPES.items() %}<button type="button" data-deal="{{ k }}">{{ v }}</button>{% endfor %}
+  </div>
+  <div class="frow">
+    <select id="f-city" aria-label="ריכוז"></select>
+    <select id="f-paper" aria-label="גליון"></select>
+    <select id="f-rooms" aria-label="חדרים">
+      <option value="">כל מספר חדרים</option>
+      {% for r in [1,2,3,4,5,6] %}<option value="{{ r }}">{{ r }}+ חדרים</option>{% endfor %}
+    </select>
+    <input type="number" id="f-pmin" placeholder="מחיר מ-" min="0" inputmode="numeric" aria-label="מחיר מינימלי">
+    <input type="number" id="f-pmax" placeholder="מחיר עד" min="0" inputmode="numeric" aria-label="מחיר מקסימלי">
+    <input type="search" id="f-q" class="q" placeholder="חיפוש חופשי: שכונה, רחוב, מילה..." aria-label="חיפוש חופשי">
+  </div>
+  <div class="fmeta"><span>נמצאו <b id="count">0</b> מודעות</span><button class="linkbtn" id="f-reset" type="button">איפוס הסינון</button></div>
+</section>
+
+<div class="board">
+  <div>
+    <section class="lane" id="lane-hi">
+      <div class="lane-head"><h2>מודעות מודגשות</h2></div>
+      <div class="track" id="track-hi"><div class="inner"></div></div>
+    </section>
+    <section class="lane">
+      <div class="lane-head"><h2>כל המודעות</h2><span>מתחלפות כל הזמן. מעבר עם העכבר עוצר.</span></div>
+      <div class="track rev" id="track-all"><div class="inner"></div></div>
+    </section>
+  </div>
+  <aside class="side" aria-label="קישורים שיווקיים">
+    <h2>קישורים שיווקיים</h2>
+    <p class="sub">מבצעים מעלי אקספרס, טמו ועוד, ממשווקים שדורגו על ידי הגולשים.</p>
+    <div class="top4" id="top4"></div>
+    <div class="stream" id="stream"><div class="inner"></div></div>
+    <a class="btn add" href="{{ url_for('luach.marketers') }}">להוספת קישור משלך</a>
+  </aside>
+</div>
+
+<dialog class="addlg" id="addlg" aria-label="פרטי המודעה">
+  <button class="x" type="button" aria-label="סגירה">×</button>
+  <div class="content"></div>
+</dialog>
+<script type="application/json" id="board-data">{{ data|tojson }}</script>
+{% endblock %}

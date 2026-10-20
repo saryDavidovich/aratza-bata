@@ -219,6 +219,7 @@ button:hover{background:#1d4ed8}
 <p><a href="/youtube-download" style="color:#2563eb;text-decoration:none;font-weight:bold">⬇️ הורדת סרטון/אודיו מיוטיוב ←</a></p>
 <p><a href="/compare" style="color:#2563eb;text-decoration:none;font-weight:bold">⚖️ השוואת תמלול מקצועי - AlefBot מול OpenAI במקביל ←</a></p>
 <p><a href="/designer" style="color:#2563eb;text-decoration:none;font-weight:bold">🖌️ שולחן עיצוב - שינוי עיצוב של עמודים קיימים ←</a></p>
+<p><a href="/luach/" style="color:#2563eb;text-decoration:none;font-weight:bold">🏠 לוח המודעות - נדל״ן לציבור החרדי (בטא) ←</a></p>
 {% if message %}<div class="msg {{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}
 <form method="post" action="/run" enctype="multipart/form-data">
   <label>קוד גישה</label>
@@ -735,6 +736,15 @@ init_designer(app)
 from transcompare import init_transcompare  # noqa: E402
 
 init_transcompare(app, require_access=_require_access, default_email=LAB_DEFAULT_EMAIL)
+
+
+
+# ============================================================
+# לוח המודעות - לוח נדל"ן לציבור החרדי (/luach) - התיקייה luach/
+# ============================================================
+from luach import init_luach  # noqa: E402
+
+init_luach(app)
 
 
 if __name__ == '__main__':

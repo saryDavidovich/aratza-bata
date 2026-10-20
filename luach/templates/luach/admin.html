@@ -87,6 +87,7 @@
     <div class="grow">
       <div class="t">{% if r.kind == 'extra_links' %}תוספת {{ r.slots or 5 }} קישורים{% else %}{{ HIGHLIGHTS[r.highlight] }}: {{ r.ad_title }}{% endif %}</div>
       <div class="m">₪{{ r.amount }} · {{ r.requester_name }} · <a href="tel:{{ r.phone }}">{{ r.phone }}</a> · {{ r.created_at[:16]|replace('T', ' ') }}</div>
+      {% if r.note %}<div class="m">{{ r.note }}</div>{% endif %}
     </div>
     <span class="status {{ r.status }}">{{ {'pending': 'ממתינה', 'approved': 'אושרה', 'rejected': 'נדחתה'}[r.status] }}</span>
     {% if r.status == 'pending' %}

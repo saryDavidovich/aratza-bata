@@ -1,0 +1,74 @@
+{% extends 'luach/base.html' %}
+{% block title %}תשלום · לוח המודעות{% endblock %}
+{% block content %}
+<div class="pay">
+  <h1 class="page-title">תשלום</h1>
+  <div class="panel pay-sum">
+    <div><div class="t">{{ label }}</div><div class="m">תשלום מאובטח דרך נדרים פלוס. פרטי הכרטיס לא עוברים דרכנו.</div></div>
+    <div class="amt">₪{{ r.amount }}</div>
+  </div>
+  {% if need_id and not error %}
+    <form class="panel stack" method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>מספר זהות</h2>
+      <p class="sub" style="margin:0">נדרים פלוס מבקשים מספר זהות לתשלום הזה. הוא עובר ישירות אליהם ולא נשמר אצלנו.</p>
+      <label class="field"><span>מספר זהות</span><input type="text" name="zeout" inputmode="numeric" pattern="[0-9]{4,9}" maxlength="9" required autocomplete="off"></label>
+      <div><button class="btn dark">המשך לתשלום</button></div>
+    </form>
+  {% elif error %}
+    <div class="flash err">לא הצלחנו לפתוח את התשלום: {{ error }}. נסה שוב בעוד רגע, או פנה למנהל הלוח.</div>
+  {% else %}
+    <div class="panel pay-box" id="pay-box">
+      <iframe id="NedarimFrame" src="{{ iframe_src }}" allow="payment" title="תשלום בנדרים פלוס" style="width:100%;border:0;height:520px"></iframe>
+    </div>
+    <div class="panel pay-wait" id="pay-wait" hidden>
+      <h2 id="wait-title">מאשרים את התשלום...</h2>
+      <p class="sub" id="wait-text">זה לוקח כמה שניות.</p>
+      <div id="wait-done" hidden>
+        <a class="btn dark" href="{{ url_for('luach.marketers' if r.kind == 'extra_links' else 'luach.board') }}">{{ 'לאזור המשווקים' if r.kind == 'extra_links' else 'לצפייה בלוח' }}</a>
+      </div>
+    </div>
+  {% endif %}
+  <p class="sub" style="margin-top:14px"><a href="{{ url_for('luach.marketers' if r.kind == 'extra_links' else 'luach.publish') }}">אשלם מאוחר יותר</a> · הבקשה נשמרת, ואפשר לחזור לתשלום מהרשימה שלך.</p>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if p and not error %}
+<script>
+(() => {
+  const frame = document.getElementById('NedarimFrame');
+  const DONE_TEXT = {{ ('המכסה שלך עלתה ב-' ~ EXTRA_SLOTS ~ ' קישורים.') if r.kind == 'extra_links' else 'ההדגשה פעילה עכשיו על המודעה שלך.' | tojson }};
+  let polling = false;
+  function finish(ok, title, text) {
+    document.getElementById('pay-box').hidden = true;
+    document.getElementById('pay-wait').hidden = false;
+    document.getElementById('wait-title').textContent = title;
+    document.getElementById('wait-text').textContent = text;
+    document.getElementById('wait-done').hidden = !ok;
+  }
+  async function poll() {
+    if (polling) return;
+    polling = true;
+    finish(false, 'מאשרים את התשלום...', 'זה לוקח כמה שניות.');
+    for (let i = 0; i < 40; i++) {
+      try {
+        const r = await fetch({{ url_for('luach.pay_status', token=p.token)|tojson }});
+        const j = await r.json();
+        if (j.status === 'paid') { finish(true, 'התשלום התקבל, תודה!', DONE_TEXT); return; }
+      } catch (e) { /* try again */ }
+      await new Promise(res => setTimeout(res, 2500));
+    }
+    finish(true, 'התשלום בוצע', 'האישור מנדרים פלוס עוד לא הגיע. הוא יגיע בדקות הקרובות וההפעלה תהיה אוטומטית.');
+  }
+  // registered once for the life of the page (per Nedarim's instructions)
+  window.addEventListener('message', e => {
+    if (e.origin !== 'https://www.matara.pro' || !e.data) return;
+    if (e.data.Name === 'Height') frame.style.height = (parseInt(e.data.Value, 10) + 10) + 'px';
+    if (e.data.Name === 'TransactionResponse' && e.data.Value && e.data.Value.Status === 'OK') poll();
+  });
+  // the board's own server is the source of truth: also check once on load (e.g. after a refresh)
+  fetch({{ url_for('luach.pay_status', token=p.token)|tojson }}).then(r => r.json()).then(j => { if (j.status === 'paid') finish(true, 'התשלום התקבל, תודה!', DONE_TEXT); });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -261,6 +261,15 @@ dialog.addlg::backdrop { background: hsl(210 7% 11% / .55); }
 .status.approved, .status.active { background: hsl(152 45% 90%); color: var(--ok); }
 .status.rejected, .status.hidden { background: hsl(0 80% 95%); color: var(--danger); }
 
+/* ---------- payment ---------- */
+.pay { max-width: 640px; margin: 0 auto; }
+.pay-sum { display: flex; align-items: center; gap: 16px; justify-content: space-between; margin-bottom: 16px; }
+.pay-sum .t { font-weight: 800; font-size: 18px; }
+.pay-sum .m { color: var(--muted); font-size: 14px; }
+.pay-sum .amt { font-family: var(--head); font-size: 40px; font-weight: 900; }
+.pay-box { padding: 10px; }
+.pay-wait { text-align: center; }
+
 /* ---------- marketers ---------- */
 .quota { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; }
 .quota .big { font-family: var(--head); font-size: 56px; font-weight: 900; line-height: 1; }

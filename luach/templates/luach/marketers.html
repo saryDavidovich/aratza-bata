@@ -37,11 +37,11 @@
   <div class="stack">
     <section class="panel">
       <h2>תוספת מכסה בתשלום</h2>
-      <p class="sub">{{ EXTRA_SLOTS }} קישורים נוספים ב-₪{{ PRICE_EXTRA }}. אחרי שליחת הבקשה ניצור קשר לתשלום, והמכסה תעלה מיד עם האישור.</p>
+      <p class="sub">{{ EXTRA_SLOTS }} קישורים נוספים ב-₪{{ PRICE_EXTRA }}. {{ 'התשלום מאובטח דרך נדרים פלוס, והמכסה עולה מיד.' if pay_online else 'אחרי שליחת הבקשה ניצור קשר לתשלום, והמכסה תעלה מיד עם האישור.' }}</p>
       <form method="post" action="{{ url_for('luach.request_extra') }}" class="stack">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <label class="field"><span>טלפון ליצירת קשר</span><input type="tel" name="phone" value="{{ stats.phone }}" required></label>
-        <div><button class="btn gold">בקשת תוספת של {{ EXTRA_SLOTS }} קישורים</button></div>
+        <div><button class="btn gold">{{ 'מעבר לתשלום' if pay_online else 'בקשת תוספת של %d קישורים'|format(EXTRA_SLOTS) }}</button></div>
       </form>
     </section>
     {% if reqs %}
@@ -50,7 +50,8 @@
       <div class="list" style="margin-top:10px">
         {% for r in reqs %}
         <div class="item"><div class="grow"><div class="t">{{ 'תוספת %d קישורים'|format(r.slots or 5) if r.kind == 'extra_links' else HIGHLIGHTS[r.highlight] ~ ': ' ~ r.ad_title }}</div><div class="m">₪{{ r.amount }} · {{ r.created_at[:10] }}</div></div>
-          <span class="status {{ r.status }}">{{ {'pending': 'ממתינה', 'approved': 'אושרה', 'rejected': 'נדחתה'}[r.status] }}</span></div>
+          <span class="status {{ r.status }}">{{ {'pending': 'ממתינה לתשלום', 'approved': 'אושרה', 'rejected': 'נדחתה'}[r.status] }}</span>
+          {% if r.status == 'pending' and pay_online %}<a class="btn small gold" href="{{ url_for('luach.pay', req_id=r.id) }}">תשלום ₪{{ r.amount }}</a>{% endif %}</div>
         {% endfor %}
       </div>
     </section>

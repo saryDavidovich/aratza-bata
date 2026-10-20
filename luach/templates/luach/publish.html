@@ -5,7 +5,7 @@
 <p class="page-sub">הפרסום חינם ועולה ללוח מיד. אפשר להוסיף הדגשה שתבלוט מעל כולם.</p>
 {% if request.args.ok %}
   <div class="flash ok">המודעה פורסמה ועלתה ללוח.
-    {% if request.args.hl in ['color', 'motion'] %} בקשת ההדגשה ({{ HIGHLIGHTS[request.args.hl] }}) נשלחה. ניצור איתך קשר לתשלום, וההדגשה תופעל מיד אחרי האישור.{% endif %}
+    {% if request.args.hl in ['color', 'motion'] %} בקשת ההדגשה ({{ HIGHLIGHTS[request.args.hl] }}) נשלחה.{% if pay_online %} אפשר לשלם עליה מהרשימה למטה.{% else %} ניצור איתך קשר לתשלום, וההדגשה תופעל מיד אחרי האישור.{% endif %}{% endif %}
     <a href="{{ url_for('luach.board') }}">לצפייה בלוח</a></div>
 {% endif %}
 <div class="two" style="margin-top:18px">
@@ -54,7 +54,8 @@
       <div class="grow"><div class="t">{{ a.title }}</div><div class="m">{{ a.deal_label }} · {{ a.city }} · {{ a.price|shekel }} · {{ a.published_date }}</div></div>
       <span class="status active">פעילה</span>
       {% if a.highlight != 'none' %}<span class="status approved">{{ HIGHLIGHTS[a.highlight] }}</span>
-      {% elif a.req_status == 'pending' %}<span class="status pending">בקשת {{ HIGHLIGHTS[a.req_highlight] }} ממתינה</span>
+      {% elif a.req_status == 'pending' %}<span class="status pending">בקשת {{ HIGHLIGHTS[a.req_highlight] }} ממתינה לתשלום</span>
+        {% if pay_online %}<a class="btn small gold" href="{{ url_for('luach.pay', req_id=a.req_id) }}">תשלום ₪{{ PRICE_COLOR if a.req_highlight == 'color' else PRICE_MOTION }}</a>{% endif %}
       {% elif a.req_status == 'rejected' %}<span class="status rejected">ההדגשה לא אושרה</span>{% endif %}
       <form method="post" action="{{ url_for('luach.delete_ad', ad_id=a.id) }}" data-confirm="למחוק את המודעה?">
         <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn small danger">מחיקה</button></form>

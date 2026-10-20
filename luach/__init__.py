@@ -14,6 +14,18 @@
   LUACH_SECRET_KEY     מפתח לחתימת ההתחברות (ברירת מחדל: נגזר מ-LAB_ACCESS_CODE)
   GOOGLE_CLIENT_ID     מזהה OAuth של גוגל - אם מוגדר, מופיע כפתור "התחברות עם Google"
   SENDGRID_API_KEY / SENDGRID_FROM_EMAIL  לשליחת מייל אימות ושחזור סיסמה (בלעדיהם: אין אימות במייל)
+
+תשלום בנדרים פלוס (אייפרם, "עסקה שהוקמה בשרת" - הסכום נעול בצד השרת):
+  NEDARIM_MOSAD           מספר המוסד (7 ספרות)
+  NEDARIM_API_VALID       טקסט האימות (ApiValid) ממסך הגדרות > API > מפתחות API
+  NEDARIM_CATEGORY        קטגוריה (Groupe) לעסקאות הלוח. ברירת מחדל: "לוח"
+  NEDARIM_WEBHOOK_SECRET  מפתח חתימת HMAC (whsec_...), אם הופעל במוסד. אפשר כמה מופרדים בפסיק בזמן החלפה
+  NEDARIM_CALLBACK_MAIL   מייל להתראה אם עדכון לא הגיע (ברירת מחדל: המנהל הראשון)
+בלי NEDARIM_MOSAD ו-NEDARIM_API_VALID - התשלום ידני, והמנהל מאשר בקשות במסך הניהול.
+
+למה זה לא מפריע לתמלול פון: ה-Webhook של המוסד (שמוגדר לתמלול פון) ממשיך לקבל גם
+את עסקאות הלוח, אבל שם מתעלמים מכל עסקה שהקטגוריה שלה אינה "תמלול פון". הלוח
+מקבל את העדכון שלו דרך CallBack ברמת העסקה, שנשלח בנוסף ל-Webhook של המוסד.
 """
 import os
 import io
@@ -64,6 +76,15 @@ CITIES = ['ירושלים', 'בני ברק', 'בית שמש', 'מודיעין ע
 def _admin_emails():
     raw = os.environ.get('LUACH_ADMIN_EMAILS') or os.environ.get('LAB_DEFAULT_EMAIL', '')
     return {e.strip().lower() for e in raw.split(',') if e.strip()}
+
+
+NEDARIM_CREATE_URL = 'https://matara.pro/nedarimplus/V6/Files/WebServices/DebitIframe.aspx?Action=CreateTransaction'
+NEDARIM_IFRAME = 'https://www.matara.pro/nedarimplus/iframe/v3/'
+NEDARIM_IPS = {'18.196.146.117', '18.194.219.73'}
+
+
+def _nedarim_ready():
+    return bool(os.environ.get('NEDARIM_MOSAD') and os.environ.get('NEDARIM_API_VALID'))
 
 
 def _mail_ready():
@@ -119,6 +140,13 @@ CREATE TABLE IF NOT EXISTS requests (
   kind TEXT, ad_id INTEGER, ad_title TEXT, highlight TEXT, slots INTEGER, amount INTEGER,
   requester_id INTEGER, requester_name TEXT, phone TEXT, note TEXT,
   status TEXT DEFAULT 'pending', created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT UNIQUE, request_id INTEGER, user_id INTEGER, amount INTEGER,
+  nedarim_id TEXT, nedarim_key TEXT, status TEXT DEFAULT 'created',
+  confirmation TEXT, last_num TEXT, last_error TEXT, verified_by TEXT, raw TEXT,
+  created_at TEXT, paid_at TEXT
 );
 CREATE INDEX IF NOT EXISTS ads_status ON ads(status);
 CREATE INDEX IF NOT EXISTS links_status ON links(status);
@@ -240,7 +268,7 @@ def csrf_token():
 
 @bp.before_request
 def _check_csrf():
-    if request.method == 'POST':
+    if request.method == 'POST' and not request.path.startswith('/luach/pay/callback/'):
         sent = request.form.get('csrf') or request.headers.get('X-CSRF')
         if not sent or not secrets.compare_digest(sent, session.get('luach_csrf', '')):
             if request.path.startswith('/luach/api/'):
@@ -254,7 +282,8 @@ def _inject():
     return dict(user=current_user(), csrf=csrf_token(), DEAL_TYPES=DEAL_TYPES, HIGHLIGHTS=HIGHLIGHTS,
                 STORES=STORES, PAPERS=PAPERS, CITIES=CITIES, PRICE_COLOR=PRICE_COLOR,
                 PRICE_MOTION=PRICE_MOTION, PRICE_EXTRA=PRICE_EXTRA, EXTRA_SLOTS=EXTRA_SLOTS,
-                google_client_id=os.environ.get('GOOGLE_CLIENT_ID', ''), mail_ready=_mail_ready())
+                google_client_id=os.environ.get('GOOGLE_CLIENT_ID', ''), mail_ready=_mail_ready(),
+                pay_online=_nedarim_ready())
 
 
 # simple brute-force protection for login
@@ -483,7 +512,10 @@ def publish():
                             VALUES ('highlight',?,?,?,?,?,?,?,'pending',?)""",
                          (ad_id, d['title'], hl, PRICE_COLOR if hl == 'color' else PRICE_MOTION, u['id'],
                           d['contact_name'] or u['name'], d['phone'], now()))
+        req_id = db().execute("SELECT MAX(id) FROM requests WHERE ad_id=?", (ad_id,)).fetchone()[0] if hl != 'none' else None
         db().commit()
+        if req_id and _nedarim_ready():
+            return redirect(url_for('luach.pay', req_id=req_id))
         return redirect(url_for('luach.publish', ok=ad_id, hl=hl))
     return render_template('luach/publish.html', form=form, my_ads=_my_ads(u['id']))
 
@@ -492,7 +524,9 @@ def _my_ads(uid):
     rows = db().execute("""SELECT a.*, (SELECT status FROM requests r WHERE r.ad_id=a.id AND r.kind='highlight'
                            ORDER BY r.id DESC LIMIT 1) AS req_status,
                            (SELECT highlight FROM requests r WHERE r.ad_id=a.id AND r.kind='highlight'
-                           ORDER BY r.id DESC LIMIT 1) AS req_highlight
+                           ORDER BY r.id DESC LIMIT 1) AS req_highlight,
+                           (SELECT id FROM requests r WHERE r.ad_id=a.id AND r.kind='highlight'
+                           ORDER BY r.id DESC LIMIT 1) AS req_id
                            FROM ads a WHERE user_id=? AND status!='removed' ORDER BY id DESC""", (uid,)).fetchall()
     return [_ad_dict(r) for r in rows]
 
@@ -580,7 +614,10 @@ def request_extra():
                         VALUES ('extra_links',?,?,?,?,?,?,'pending',?)""",
                      (EXTRA_SLOTS, PRICE_EXTRA, u['id'], st['name'] or u['name'], request.form.get('phone', '').strip() or st['phone'],
                       request.form.get('note', '').strip()[:200], now()))
+        cur_id = db().execute("SELECT MAX(id) FROM requests WHERE requester_id=? AND kind='extra_links'", (u['id'],)).fetchone()[0]
         db().commit()
+        if _nedarim_ready():
+            return redirect(url_for('luach.pay', req_id=cur_id))
         flash('הבקשה נשלחה. אחרי התשלום והאישור המכסה תעלה ב-5 קישורים.', 'ok')
     return redirect(url_for('luach.marketers'))
 
@@ -650,6 +687,17 @@ def admin_highlight(ad_id):
     return redirect(url_for('luach.admin', tab='ads', q=request.form.get('q', '')))
 
 
+def _approve_request(r, note=None):
+    """Turns on what was paid for: the highlight, or 5 more link slots. Used by the admin and by the payment callback."""
+    if r['kind'] == 'highlight':
+        db().execute('UPDATE ads SET highlight=? WHERE id=?', (r['highlight'], r['ad_id']))
+    else:
+        db().execute("""INSERT INTO marketers (user_id, name, phone, extra_slots) VALUES (?,?,?,?)
+                        ON CONFLICT(user_id) DO UPDATE SET extra_slots = extra_slots + excluded.extra_slots""",
+                     (r['requester_id'], r['requester_name'], r['phone'], r['slots'] or EXTRA_SLOTS))
+    db().execute("UPDATE requests SET status='approved', note=COALESCE(?, note) WHERE id=? AND status='pending'", (note, r['id']))
+
+
 @bp.route('/admin/requests/<int:req_id>/<action>', methods=['POST'])
 @admin_required
 def admin_request(req_id, action):
@@ -657,13 +705,9 @@ def admin_request(req_id, action):
     if not r or r['status'] != 'pending' or action not in ('approve', 'reject'):
         abort(400)
     if action == 'approve':
-        if r['kind'] == 'highlight':
-            db().execute('UPDATE ads SET highlight=? WHERE id=?', (r['highlight'], r['ad_id']))
-        else:
-            db().execute("""INSERT INTO marketers (user_id, name, phone, extra_slots) VALUES (?,?,?,?)
-                            ON CONFLICT(user_id) DO UPDATE SET extra_slots = extra_slots + excluded.extra_slots""",
-                         (r['requester_id'], r['requester_name'], r['phone'], r['slots'] or EXTRA_SLOTS))
-    db().execute('UPDATE requests SET status=? WHERE id=?', ('approved' if action == 'approve' else 'rejected', req_id))
+        _approve_request(r, 'אושר ידנית')
+    else:
+        db().execute("UPDATE requests SET status='rejected' WHERE id=?", (req_id,))
     db().commit()
     flash('הבקשה אושרה.' if action == 'approve' else 'הבקשה נדחתה.', 'ok')
     return redirect(url_for('luach.admin', tab='requests'))
@@ -689,6 +733,179 @@ def admin_delete_samples():
     db().commit()
     flash('כל מודעות וקישורי הדוגמה נמחקו.', 'ok')
     return redirect(url_for('luach.admin', tab='ads'))
+
+
+# ------------------------------------------------------------------
+# payment - Nedarim Plus iframe, transaction created on our server
+# ------------------------------------------------------------------
+def _clean(text, limit):
+    """Nedarim rejects anything that looks like HTML, and links in Comment."""
+    t = (text or '').replace('<', '(').replace('>', ')').replace('&#', '')
+    for bad in ('http', 'www', 'src='):
+        t = t.replace(bad, '')
+    return t.strip()[:limit]
+
+
+def _request_label(r):
+    if r['kind'] == 'extra_links':
+        return f"תוספת {r['slots'] or EXTRA_SLOTS} קישורים שיווקיים"
+    return f"{HIGHLIGHTS.get(r['highlight'], 'הדגשה')} למודעה: {r['ad_title'] or ''}"
+
+
+def _create_nedarim_transaction(r, pay_token, user, zeout=''):
+    import requests as rq
+    name = (user.get('name') or '').split()
+    admins = sorted(_admin_emails())
+    data = {
+        'Mosad': os.environ['NEDARIM_MOSAD'], 'ApiValid': os.environ['NEDARIM_API_VALID'],
+        'PaymentType': 'Ragil', 'Amount': str(r['amount']), 'Currency': '1', 'Tashlumim': '1',
+        'FirstName': _clean(name[0] if name else '', 50), 'LastName': _clean(' '.join(name[1:]), 50),
+        'Phone': ''.join(ch for ch in (r['phone'] or '') if ch.isdigit())[:20],
+        'Mail': (user.get('email') or '')[:50],
+        'Zeout': ''.join(ch for ch in zeout if ch.isdigit())[:9],
+        'Groupe': _clean(os.environ.get('NEDARIM_CATEGORY', 'לוח'), 100),
+        'Comment': _clean(_request_label(r), 300),
+        'Param2': f'LUACH-{pay_token[:16]}',
+        'CallBack': _base_url() + url_for('luach.pay_callback', token=pay_token),
+        'CallBackMailError': os.environ.get('NEDARIM_CALLBACK_MAIL') or (admins[0] if admins else ''),
+        'AjaxId': str(int(time.time() * 1000)),
+    }
+    resp = rq.post(NEDARIM_CREATE_URL, data=data, timeout=20)
+    try:
+        j = resp.json()
+    except ValueError:
+        return None, f'תשובה לא תקינה מנדרים פלוס: {resp.text[:160]}'
+    if j.get('Status') != 'OK' or not j.get('ID'):
+        return None, j.get('Message') or 'שגיאה לא ידועה מנדרים פלוס'
+    return j, None
+
+
+@bp.route('/pay/<int:req_id>', methods=['GET', 'POST'])
+@login_required
+def pay(req_id):
+    u = current_user()
+    r = db().execute('SELECT * FROM requests WHERE id=?', (req_id,)).fetchone()
+    if not r or (r['requester_id'] != u['id'] and not u['is_admin']):
+        abort(404)
+    if r['status'] != 'pending':
+        flash('הבקשה הזו כבר טופלה.' if r['status'] == 'approved' else 'הבקשה הזו בוטלה.', 'ok' if r['status'] == 'approved' else 'err')
+        return redirect(url_for('luach.marketers' if r['kind'] == 'extra_links' else 'luach.publish'))
+    if not _nedarim_ready():
+        flash('תשלום מקוון עדיין לא הופעל. ניצור איתך קשר לתשלום.', 'err')
+        return redirect(url_for('luach.publish'))
+    # reuse an open transaction for this request (a Nedarim transaction can be paid once and does not expire)
+    p = db().execute("SELECT * FROM payments WHERE request_id=? AND status='created' AND amount=? ORDER BY id DESC",
+                     (req_id, r['amount'])).fetchone()
+    if not p:
+        token = secrets.token_urlsafe(24)
+        # the ID number is passed straight to Nedarim and never stored here
+        zeout = request.form.get('zeout', '') if request.method == 'POST' else ''
+        j, err = _create_nedarim_transaction(r, token, u, zeout)
+        if err:
+            log.error(f'nedarim create failed for request {req_id}: {err}')
+            need_id = 'זהות' in err
+            return render_template('luach/pay.html', r=r, label=_request_label(r), error=None if need_id and not zeout else err,
+                                   need_id=need_id)
+        db().execute("""INSERT INTO payments (token, request_id, user_id, amount, nedarim_id, nedarim_key, status, created_at)
+                        VALUES (?,?,?,?,?,?,'created',?)""", (token, req_id, u['id'], r['amount'], str(j['ID']), j.get('Key', ''), now()))
+        db().commit()
+        p = db().execute('SELECT * FROM payments WHERE token=?', (token,)).fetchone()
+    from urllib.parse import urlencode
+    src = NEDARIM_IFRAME + '?' + urlencode({'language': 'he', 'TransactionId': p['nedarim_id'], 'Key': p['nedarim_key'],
+                                            'ButtonText': 'תשלום'})
+    return render_template('luach/pay.html', r=r, label=_request_label(r), p=p, iframe_src=src)
+
+
+@bp.route('/pay/status/<token>')
+@login_required
+def pay_status(token):
+    p = db().execute('SELECT status, request_id, last_error FROM payments WHERE token=?', (token,)).fetchone()
+    u = current_user()
+    if not p:
+        return jsonify(status='missing'), 404
+    owner = db().execute('SELECT requester_id, kind FROM requests WHERE id=?', (p['request_id'],)).fetchone()
+    if owner['requester_id'] != u['id'] and not u['is_admin']:
+        abort(403)
+    return jsonify(status=p['status'], kind=owner['kind'], error=p['last_error'])
+
+
+def _client_ip():
+    fwd = request.headers.get('X-Forwarded-For', '')
+    return (fwd.split(',')[0].strip() if fwd else request.remote_addr or '')
+
+
+def _signature_state(raw):
+    """'valid' / 'invalid' / 'absent' (no secret configured or no signature headers)."""
+    import hmac
+    secrets_ = [x.strip() for x in os.environ.get('NEDARIM_WEBHOOK_SECRET', '').split(',') if x.strip()]
+    ts = request.headers.get('X-Nedarim-Timestamp', '')
+    sig = request.headers.get('X-Nedarim-Signature', '').replace('v1=', '')
+    if not secrets_ or not ts or not sig:
+        return 'absent'
+    try:
+        if abs(time.time() - int(ts)) > 600:
+            return 'invalid'
+    except ValueError:
+        return 'invalid'
+    msg = ts.encode() + b'.' + raw
+    for sec in secrets_:
+        exp = hmac.new(sec.encode(), msg, hashlib.sha256).hexdigest()
+        if hmac.compare_digest(exp, sig):
+            return 'valid'
+    return 'invalid'
+
+
+@bp.route('/pay/callback/<token>', methods=['POST'])
+def pay_callback(token):
+    """Server-to-server update from Nedarim Plus (sent on every attempt, success or failure).
+    The address itself carries a random secret per payment, so it cannot be guessed;
+    on top of that we check the HMAC signature (when enabled), the sender IP and the amount."""
+    raw = request.get_data(cache=True)
+    try:
+        data = json.loads(raw.decode('utf-8') or '{}')
+    except ValueError:
+        data = request.form.to_dict()
+    conn = db()
+    p = conn.execute('SELECT * FROM payments WHERE token=?', (token,)).fetchone()
+    ip = _client_ip()
+    if not p:
+        log.warning(f'nedarim callback for unknown token from {ip}')
+        return jsonify(ok=False), 404
+    sig = _signature_state(raw)
+    if sig == 'invalid':
+        log.warning(f'nedarim callback with BAD signature, payment {p["id"]}, ip {ip}')
+        return jsonify(ok=False), 401
+    if ip not in NEDARIM_IPS:
+        log.warning(f'nedarim callback from unlisted IP {ip} (payment {p["id"]}, signature {sig})')
+    conn.execute('UPDATE payments SET raw=? WHERE id=?', (raw.decode('utf-8', 'replace')[:4000], p['id']))
+    if p['status'] == 'paid':
+        conn.commit()
+        return jsonify(WEBDocID=p['id'])
+    if str(data.get('Status', '')).upper() != 'OK':
+        conn.execute('UPDATE payments SET last_error=? WHERE id=?', (str(data.get('Message', ''))[:300], p['id']))
+        conn.commit()
+        return jsonify(ok=True)
+    tid = str(data.get('TransactionId') or data.get('ID') or '')
+    amount = data.get('Amount')
+    if amount not in (None, ''):
+        try:
+            if round(float(str(amount).replace(',', ''))) != int(p['amount']):
+                log.warning(f'nedarim callback amount mismatch payment {p["id"]}: {amount} != {p["amount"]}')
+                conn.execute('UPDATE payments SET last_error=? WHERE id=?', (f'סכום לא תואם: {amount}', p['id']))
+                conn.commit()
+                return jsonify(ok=False), 400
+        except ValueError:
+            pass
+    verified = 'signature' if sig == 'valid' else ('ip' if ip in NEDARIM_IPS else 'secret-url')
+    conn.execute("""UPDATE payments SET status='paid', confirmation=?, last_num=?, verified_by=?, paid_at=?,
+                    nedarim_id=COALESCE(NULLIF(?, ''), nedarim_id) WHERE id=?""",
+                 (str(data.get('Confirmation', '')), str(data.get('LastNum', '')), verified, now(), tid, p['id']))
+    r = conn.execute('SELECT * FROM requests WHERE id=?', (p['request_id'],)).fetchone()
+    if r and r['status'] == 'pending':
+        _approve_request(r, f"שולם בנדרים פלוס (עסקה {tid or p['nedarim_id']}, אישור {data.get('Confirmation', '')})")
+    conn.commit()
+    log.info(f'nedarim payment {p["id"]} paid, request {p["request_id"]} approved ({verified})')
+    return jsonify(WEBDocID=p['id'])
 
 
 # ------------------------------------------------------------------

@@ -218,6 +218,7 @@ button:hover{background:#1d4ed8}
 <p><a href="/videochat" style="color:#2563eb;text-decoration:none;font-weight:bold">🎬 צ'אט סרטונים עם Gemini (יצירת סרטונים + העלאת קבצים + שליחה למייל) ←</a></p>
 <p><a href="/youtube-download" style="color:#2563eb;text-decoration:none;font-weight:bold">⬇️ הורדת סרטון/אודיו מיוטיוב ←</a></p>
 <p><a href="/compare" style="color:#2563eb;text-decoration:none;font-weight:bold">⚖️ השוואת תמלול מקצועי - AlefBot מול OpenAI במקביל ←</a></p>
+<p><a href="/judge" style="color:#2563eb;text-decoration:none;font-weight:bold">🧑‍⚖️ תמלול משולב - Gemini + OpenAI + שופט ששומע ומכריע ←</a></p>
 <p><a href="/designer" style="color:#2563eb;text-decoration:none;font-weight:bold">🖌️ שולחן עיצוב - שינוי עיצוב של עמודים קיימים ←</a></p>
 <p><a href="/luach/" style="color:#2563eb;text-decoration:none;font-weight:bold">🏠 לוח המודעות - נדל״ן לציבור החרדי (בטא) ←</a></p>
 {% if message %}<div class="msg {{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}

@@ -66,15 +66,24 @@ OPENAI_MODEL = os.environ.get('LAB_OPENAI_TRANSCRIBE_MODEL', 'gpt-transcribe')
 FIX_MODEL = os.environ.get('LAB_OPENAI_FIX_MODEL', 'gpt-5')
 THIRD_MODEL = os.environ.get('LAB_THIRD_MODEL', 'gemini-3.1-pro-preview')
 THIRD_MIN_SIMILARITY = 0.75   # קריאה שלישית ששינתה יותר מזה - נדחית (נשאר הטקסט של התיקון)
+GEMINI_MODEL = os.environ.get('LAB_GEMINI_TRANSCRIBE_MODEL', 'gemini-3.5-flash')
+JUDGE_MODEL = os.environ.get('LAB_JUDGE_MODEL', 'gpt-audio-1.5')       # OpenAI ששומע את השמע ושופט
+JUDGE_MIN_SIMILARITY = 0.6    # תוצאה של השופט שרחוקה משני התמלולים - נדחית
 MAX_FILE_SIZE = 300 * 1024 * 1024
 SEG_TARGET, SEG_MIN, SEG_MAX = 40, 30, 50     # שניות
 WORKERS = 6
 
-ENGINES = ('alefbot', 'openai', 'plus', 'third')
+ENGINES = ('alefbot', 'openai', 'plus', 'third', 'gemini', 'oaraw', 'judge')
 ENGINE_NAMES = {'alefbot': 'AlefBot (התמלול המקצועי היום)',
                 'openai': 'OpenAI רגיל',
                 'plus': 'OpenAI עם רקע + תיקון',
-                'third': 'קריאה שלישית (מול השמע)'}
+                'third': 'קריאה שלישית (מול השמע)',
+                'gemini': 'Gemini',
+                'oaraw': 'OpenAI (עם רקע ומילים צפויות)',
+                'judge': 'שופט: Gemini מול OpenAI'}
+DEFAULT_SELECTED = ('alefbot', 'plus', 'gemini', 'judge')
+# דף /judge - "תמלול משולב": Gemini ו-OpenAI במקביל, ושופט ששומע ומכריע. שלוש עמודות קבועות.
+JUDGE_PRESET = ('gemini', 'oaraw', 'judge')
 LANG_NAMES = {'he': 'עברית', 'yi': 'אידיש', 'en': 'אנגלית'}
 
 BASIC_PROMPT = 'תמלול שיחה או שיעור בעברית.'
@@ -145,6 +154,84 @@ def _third_seg(gclient, wav_path, prev_text, text, next_text):
     raise RuntimeError(f'הקריאה השלישית נכשלה: {last}')
 
 
+GEMINI_SEG_PROMPT = """תמלל את קטע השמע הזה במדויק, מילה במילה, בשפת הדובר.
+רקע: {context}
+- כתוב כל מילה שנאמרה, גם אם הקול לא ברור. אל תסכם, אל תקצר ואל תוסיף.
+- שמור על מינוח תורני, ארמית וראשי תיבות עם גרשיים.
+- החזר רק את הטקסט המתומלל, בלי הערות."""
+
+JUDGE_INSTRUCTIONS = """לפניך קטע שמע, ושני תמלולים שלו שנעשו בשני מנועים שונים: תמלול א' ותמלול ב'.
+המשימה: להאזין לשמע ולכתוב את התמלול הנכון ביותר של הקטע.
+
+כללים מחייבים:
+- במקומות ששני התמלולים זהים - השאר כמו שהם.
+- בכל מקום שהם שונים - הקשב לשמע ובחר את הגרסה שמתאימה למה שנאמר בפועל.
+- אם שניהם שגויים במקום מסוים והשמע ברור - כתוב את מה שנשמע. אם לא ברור - בחר את הסבירה מביניהם.
+- אל תכתוב מילה שלא נאמרה, אל תסכם, אל תקצר ואל תשנה את הסגנון של הדובר.
+- הקטע שלפני והקטע שאחרי ניתנים רק כהקשר - אל תחזיר אותם.
+
+החזר אך ורק את התמלול הסופי של הקטע, בלי הסברים ובלי לציין מאיזה תמלול לקחת."""
+
+
+def _gemini_seg(gclient, wav_path, context):
+    from google.genai import types as gtypes
+    with open(wav_path, 'rb') as fh:
+        audio = fh.read()
+    last = None
+    for attempt in range(3):
+        try:
+            r = gclient.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=[gtypes.Part.from_bytes(data=audio, mime_type='audio/wav'),
+                          GEMINI_SEG_PROMPT.format(context=context)])
+            return (r.text or '').strip()
+        except Exception as e:
+            last = e
+            log.warning(f'compare gemini seg attempt {attempt + 1}: {e}')
+            time.sleep(5)
+    raise RuntimeError(f'Gemini נכשל בקטע {os.path.basename(wav_path)}: {last}')
+
+
+def _judge_seg(client, wav_path, gem, oa, prev_text, next_text):
+    """שופט: OpenAI ששומע את השמע של הקטע ומקבל את שני התמלולים, ובוחר בכל מקום
+    את הנכון. מחזיר (טקסט, הערה). אם מודל השמע נכשל - שופט בלי שמע (מודל טקסט)."""
+    gem, oa = (gem or '').strip(), (oa or '').strip()
+    if not gem and not oa:
+        return '', ''
+    if gem == oa:
+        return oa, ''
+    msg = (f'{JUDGE_INSTRUCTIONS}\n\nהקטע שלפני (הקשר בלבד):\n{prev_text or "(אין)"}\n\n'
+           f'תמלול א\':\n{gem or "(ריק)"}\n\nתמלול ב\':\n{oa or "(ריק)"}\n\n'
+           f'הקטע שאחרי (הקשר בלבד):\n{next_text or "(אין)"}')
+    with open(wav_path, 'rb') as fh:
+        b64 = base64.b64encode(fh.read()).decode()
+    out, note = None, ''
+    for attempt in range(2):
+        try:
+            r = client.chat.completions.create(
+                model=JUDGE_MODEL, modalities=['text'],
+                messages=[{'role': 'user', 'content': [
+                    {'type': 'text', 'text': msg},
+                    {'type': 'input_audio', 'input_audio': {'data': b64, 'format': 'wav'}}]}])
+            out = (r.choices[0].message.content or '').strip()
+            break
+        except Exception as e:
+            log.warning(f'compare judge (audio) attempt {attempt + 1}: {e}')
+            note = f'בלי שמע: {type(e).__name__}'
+            time.sleep(4)
+    if out is None:   # גיבוי - שופט טקסט בלבד
+        r = client.chat.completions.create(
+            model=FIX_MODEL, reasoning_effort='medium',
+            messages=[{'role': 'user', 'content': msg.replace('להאזין לשמע ול', '').replace('הקשב לשמע ו', '')}])
+        out = (r.choices[0].message.content or '').strip()
+    if not out:
+        return oa or gem, 'ריק - נשאר OpenAI'
+    best = max(difflib.SequenceMatcher(None, ref.split(), out.split(), autojunk=False).ratio() for ref in (gem, oa) if ref)
+    if best < JUDGE_MIN_SIMILARITY:
+        return oa or gem, f'נדחה: רחוק משני התמלולים ({round(best * 100)}%)'
+    return out, note
+
+
 def diff_html(before, after):
     """HTML של after, עם סימון: מילים שנוספו/הוחלפו בירוק, ומילים שנמחקו - מחוקות באדום."""
     a, b = (before or '').split(), (after or '').split()
@@ -172,6 +259,8 @@ _COLS = {
 for _e in ENGINES:
     _COLS.update({f'{_e}_status': 'TEXT', f'{_e}_text': 'TEXT', f'{_e}_error': 'TEXT', f'{_e}_secs': 'REAL'})
 _COLS['plus_raw'] = 'TEXT'
+_COLS['judge_log'] = 'TEXT'
+_COLS['engines'] = 'TEXT'
 _COLS['third_log'] = 'TEXT'
 
 
@@ -429,6 +518,9 @@ def _process(cid, src_path, link):
         log.info(f'compare {cid}: {dur:.0f}s, {len(segs)} קטעים')
 
         client = _openai()
+        selected = [e for e in (row.get('engines') or ','.join(DEFAULT_SELECTED)).split(',') if e in ENGINES]
+        need_raw = any(e in selected for e in ('plus', 'third', 'judge', 'oaraw'))
+        need_gem = any(e in selected for e in ('gemini', 'judge'))
         keywords = _keywords_list(row['keywords'])
         context = (row['context'] or '').strip() or DEFAULT_CONTEXT
         results = {}
@@ -448,10 +540,12 @@ def _process(cid, src_path, link):
             with ThreadPoolExecutor(WORKERS) as ex:
                 return list(ex.map(lambda p: _transcribe_seg(client, p, BASIC_PROMPT, row['language']), seg_paths))
 
+        shared = {}
+
         def run_plus():
-            with ThreadPoolExecutor(WORKERS) as ex:
-                raw = list(ex.map(lambda p: _transcribe_seg(client, p, context, row['language'], keywords), seg_paths))
-            _update(cid, plus_raw=json.dumps(raw, ensure_ascii=False))
+            raw = shared['raw']
+            if raw is None:
+                raise RuntimeError('התמלול של OpenAI עם הרקע נכשל')
             with ThreadPoolExecutor(WORKERS) as ex:
                 return list(ex.map(lambda i: _fix_seg(client, raw[i - 1] if i else '', raw[i],
                                                        raw[i + 1] if i + 1 < len(raw) else '', row['fix_effort'] or 'high'),
@@ -471,20 +565,70 @@ def _process(cid, src_path, link):
             _update(cid, third_log=json.dumps(notes, ensure_ascii=False))
             return [t for t, _ in res]
 
-        def plus_then_third():
-            timed('plus', run_plus)
-            timed('third', run_third)
+        def run_gemini():
+            from google import genai
+            gclient = genai.Client(api_key=os.environ.get('GOOGLE_API_KEY'))
+            with ThreadPoolExecutor(WORKERS) as ex:
+                return list(ex.map(lambda p: _gemini_seg(gclient, p, context), seg_paths))
 
-        threads = [threading.Thread(target=timed, args=('alefbot', lambda: _run_alefbot(wav, row['output_language']))),
-                   threading.Thread(target=timed, args=('openai', run_openai)),
-                   threading.Thread(target=plus_then_third)]
+        def run_judge():
+            gem, raw = results.get('gemini'), shared.get('raw')
+            if gem is None or raw is None:
+                raise RuntimeError('חסר אחד התמלולים (Gemini או OpenAI) - אין מה לשפוט')
+            with ThreadPoolExecutor(WORKERS) as ex:
+                res = list(ex.map(lambda i: _judge_seg(client, seg_paths[i], gem[i], raw[i],
+                                                       raw[i - 1] if i else '', raw[i + 1] if i + 1 < len(raw) else ''),
+                                  range(len(raw))))
+            _update(cid, judge_log=json.dumps({i: n for i, (_, n) in enumerate(res) if n}, ensure_ascii=False))
+            return [t for t, _ in res]
+
+        raw_done = threading.Event()
+
+        def raw_chain():
+            # OpenAI עם רקע ומילים צפויות - בסיס לתיקון, לקריאה השלישית ולשופט
+            def get_raw():
+                with ThreadPoolExecutor(WORKERS) as ex:
+                    raw = list(ex.map(lambda p: _transcribe_seg(client, p, context, row['language'], keywords),
+                                      seg_paths))
+                _update(cid, plus_raw=json.dumps(raw, ensure_ascii=False))
+                return raw
+            if 'oaraw' in selected:
+                timed('oaraw', get_raw)
+                shared['raw'] = results.get('oaraw')
+            else:
+                try:
+                    shared['raw'] = get_raw()
+                except Exception as e:
+                    log.error(f'compare {cid} raw: {e}', exc_info=True)
+                    shared['raw'] = None
+            raw_done.set()
+            if 'plus' in selected or 'third' in selected:
+                timed('plus', run_plus)
+            if 'third' in selected:
+                timed('third', run_third)
+
+        def gem_chain():
+            timed('gemini', run_gemini)
+            if 'judge' in selected:
+                raw_done.wait()
+                timed('judge', run_judge)
+
+        threads = []
+        if 'alefbot' in selected:
+            threads.append(threading.Thread(target=timed, args=('alefbot', lambda: _run_alefbot(wav, row['output_language']))))
+        if 'openai' in selected:
+            threads.append(threading.Thread(target=timed, args=('openai', run_openai)))
+        if need_raw:
+            threads.append(threading.Thread(target=raw_chain))
+        if need_gem:
+            threads.append(threading.Thread(target=gem_chain))
         for t in threads:
             t.start()
         for t in threads:
             t.join()
 
         # שמירה: כל מנוע מחולק לקטעים. AlefBot מחולק לפי ההתאמה מול OpenAI הרגיל
-        ref = results.get('openai') or results.get('plus') or [''] * len(segs)
+        ref = results.get('openai') or shared.get('raw') or results.get('gemini') or [''] * len(segs)
         if results.get('alefbot') is not None:
             results['alefbot'] = split_by_reference(results['alefbot'], ref)
         for i, s in enumerate(segs):
@@ -532,6 +676,11 @@ def _price(name, dur):
         return None
 
 
+def selected_engines(row):
+    sel = [e for e in (row.get('engines') or '').split(',') if e in ENGINES]
+    return tuple(sel) if sel else ('alefbot', 'openai', 'plus', 'third')   # השוואות ישנות - 4 העמודות הקודמות
+
+
 def summary(row):
     out = {}
     for n in ENGINES:
@@ -542,7 +691,21 @@ def summary(row):
     out['sim'] = {'alefbot_openai': similarity(out['alefbot']['text'], out['openai']['text']),
                   'alefbot_plus': similarity(out['alefbot']['text'], out['plus']['text']),
                   'openai_plus': similarity(out['openai']['text'], out['plus']['text']),
-                  'plus_third': similarity(out['plus']['text'], out['third']['text'])}
+                  'plus_third': similarity(out['plus']['text'], out['third']['text']),
+                  'gemini_raw': None, 'judge': None}
+    try:
+        raw_full = '\n\n'.join(json.loads(row.get('plus_raw') or '[]'))
+    except ValueError:
+        raw_full = ''
+    out['sim']['gemini_raw'] = similarity(out['gemini']['text'], raw_full)
+    try:
+        jnotes = json.loads(row.get('judge_log') or '{}')
+    except ValueError:
+        jnotes = {}
+    try:
+        raw_segs = json.loads(row.get('plus_raw') or '[]')
+    except ValueError:
+        raw_segs = []
     try:
         notes = json.loads(row.get('third_log') or '{}')
     except ValueError:
@@ -558,13 +721,24 @@ def summary(row):
         if seg.get('third') and seg.get('third') != seg.get('plus'):
             changed += 1
     out['third_changed'] = changed
+    took = 0
+    for i, seg in enumerate(out['segments']):
+        oa = raw_segs[i] if i < len(raw_segs) else ''
+        seg['judge_html'] = diff_html(oa, seg.get('judge')) if seg.get('judge') else ''
+        seg['judge_note'] = jnotes.get(str(i), '')
+        if seg.get('judge') and seg.get('judge') != oa:
+            took += 1
+    out['judge_changed'] = took
     out['third_rejected'] = sum(1 for v in notes.values() if v.startswith('נדחה'))
     # רוחב עמודה יחסי לאורך הטקסט - כדי ששלוש העמודות ייגמרו בערך באותו גובה (מינימום 20%)
-    lens = {n: max(1, out[n]['chars']) if out[n]['status'] == 'done' else 1 for n in ENGINES}
+    sel = selected_engines(row)
+    out['selected'] = sel
+    lens = {n: max(1, out[n]['chars']) if out[n]['status'] == 'done' else 1 for n in sel}
     total = sum(lens.values())
-    raw = {n: max(20.0, 100.0 * lens[n] / total) for n in ENGINES}
+    minw = 100.0 / len(sel) * 0.6
+    raw = {n: max(minw, 100.0 * lens[n] / total) for n in sel}
     scale = 100.0 / sum(raw.values())
-    out['widths'] = {n: round(raw[n] * scale, 1) for n in ENGINES}
+    out['widths'] = {n: round(raw[n] * scale, 1) for n in sel}
     return out
 
 
@@ -612,7 +786,8 @@ def _send_email(row):
         return
     s = summary(row)
     head_cells = ''
-    for n in ENGINES:
+    sel = s['selected']
+    for n in sel:
         e = s[n]
         info = (f'זמן עיבוד {_fmt_secs(e["secs"])} · {e["words"]} מילים'
                 + (f' · ₪{e["price"]:.2f}' if e['price'] is not None else '')) if e['status'] == 'done' \
@@ -626,27 +801,32 @@ def _send_email(row):
                  f'white-space:nowrap">{_fmt_secs(seg["start"])}</td>'
                  + ''.join(f'<td style="padding:6px 8px;border:1px solid #cfe0fb;vertical-align:top;line-height:1.7;'
                            f'font-size:14px;text-align:justify;background:#ffffff">'
-                           + (seg['third_html'] if n == 'third' and seg.get('third_html') else escape(seg.get(n) or ''))
+                           + (seg[n + '_html'] if n in ('third', 'judge') and seg.get(n + '_html') else escape(seg.get(n) or ''))
                            + '</td>'
-                           for n in ENGINES) + '</tr>')
+                           for n in sel) + '</tr>')
     sim = s['sim']
     pct = lambda v: f'{v}%' if v is not None else '-'
     link = os.environ.get('APP_BASE_URL', '').rstrip('/')
     view = f'<p><a href="{link}/compare/{row["id"]}">לצפייה בדף עם נגן</a> (צריך קוד גישה)</p>' if link else ''
     html = (f'<div dir="rtl" style="font-family:Arial,sans-serif;max-width:1200px;margin:0 auto;background:#eef4fb;padding:16px">'
-            f'<h2 style="color:#0a58ca;margin:0 0 6px">השוואת תמלול</h2>'
+            f'<h2 style="color:#0a58ca;margin:0 0 6px">{"תמלול משולב: Gemini + OpenAI + שופט" if sel == JUDGE_PRESET else "השוואת תמלול"}</h2>'
             f'<div style="color:#43546b;font-size:14px">{escape(row["source"] or "")} · אורך {_fmt_secs(row["duration_sec"])} · '
             f'{len(s["segments"])} קטעים</div>'
             f'<div style="color:#43546b;font-size:14px">דמיון: AlefBot מול OpenAI רגיל {pct(sim["alefbot_openai"])} · '
             f'AlefBot מול המשופר {pct(sim["alefbot_plus"])} · רגיל מול המשופר {pct(sim["openai_plus"])}</div>'
             f'<div style="color:#43546b;font-size:14px">קריאה שלישית שינתה {s["third_changed"]} קטעים'
             + (f', {s["third_rejected"]} נדחו כי שינו יותר מדי' if s['third_rejected'] else '') +
-            f' · ירוק = נוסף/הוחלף מול התיקון, אדום מחוק = הוסר</div>{view}'
+            f' · ירוק = נוסף/הוחלף מול התיקון, אדום מחוק = הוסר</div>'
+            + (f'<div style="color:#43546b;font-size:14px">שופט: שינה {s["judge_changed"]} קטעים מול OpenAI · '
+               f'דמיון Gemini מול OpenAI {pct(sim["gemini_raw"])} · בעמודת השופט ירוק = שונה מ-OpenAI (לרוב נלקח מ-Gemini)</div>'
+               if 'judge' in sel else '') + f'{view}'
             f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:12px">'
             f'<tr><th style="width:44px;border:1px solid #cfe0fb;background:#e3edfc">זמן</th>{head_cells}</tr>{rows}</table></div>')
     msg = Mail(from_email=Email(os.environ.get('SENDGRID_FROM_EMAIL', ''), 'מעבדת בדיקות'),
-               to_emails=row['email'], subject=f'🧪 השוואת תמלול - {row["source"]}', html_content=html)
-    for n in ENGINES:
+               to_emails=row['email'], html_content=html,
+               subject=(f'🧪 תמלול משולב (Gemini + OpenAI + שופט) - {row["source"]}' if sel == JUDGE_PRESET
+                        else f'🧪 השוואת תמלול - {row["source"]}'))
+    for n in sel:
         if s[n]['status'] == 'done':
             try:
                 data = _docx(f'{ENGINE_NAMES[n]} - {row["source"]}', s['segments'], n, s[n]['text'])
@@ -662,7 +842,7 @@ def _send_email(row):
 
 PAGE_HTML = """<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>השוואת תמלול</title>
+<title>{{ page_title }}</title>
 {% if refresh %}<meta http-equiv="refresh" content="20">{% endif %}
 <style>
 body{font-family:Arial,sans-serif;margin:0;color:#0b1f3a;background:#eef4fb}
@@ -700,8 +880,9 @@ a{color:#0a58ca}
 <div class="player"><b>{{ row.source }}</b><audio id="aud" controls preload="metadata" src="/compare/audio/{{ row.id }}?access_code={{ access_code }}"></audio></div>
 {% endif %}
 <div class="wrap">
-<h2>השוואת תמלול</h2>
-<p class="note">AlefBot (כמו היום) · OpenAI רגיל · OpenAI עם רקע ומילים צפויות + תיקון במודל חושב · קריאה שלישית מול השמע. מחולק לקטעים לפי ההקלטה. <a href="/compare?access_code={{ access_code }}">השוואה חדשה</a> · <a href="/">חזרה למעבדה</a></p>
+<h2>{{ page_title }}</h2>
+<p class="note">{% if preset %}Gemini ו-OpenAI מתמללים כל קטע במקביל, ושופט של OpenAI ששומע את הקטע בוחר בכל מקום את הגרסה הנכונה. שלוש עמודות, מחולק לקטעים לפי ההקלטה, עם נגן.{% else %}כמה מנועים על אותו קובץ, מחולק לקטעים לפי ההקלטה. בכל השוואה בוחרים אילו עמודות להריץ.{% endif %}
+  <a href="{{ base_path }}?access_code={{ access_code }}">{{ 'תמלול חדש' if preset else 'השוואה חדשה' }}</a> · <a href="/">חזרה למעבדה</a></p>
 {% if message %}<div class="{{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}
 
 {% if row %}
@@ -709,7 +890,8 @@ a{color:#0a58ca}
     <div class="note">נוצר {{ row.created_at }} · אורך {{ fmt(row.duration_sec) }} · {{ s.segments|length }} קטעים · שפה {{ langs.get(row.language, row.language) }}
       {% if refresh %} · <b>עדיין רץ - הדף מתרענן לבד</b>{% endif %}</div>
     <div class="note">דמיון: AlefBot מול OpenAI רגיל {{ pct(s.sim.alefbot_openai) }} · AlefBot מול המשופר {{ pct(s.sim.alefbot_plus) }} · רגיל מול המשופר {{ pct(s.sim.openai_plus) }}</div>
-    <div class="note">קריאה שלישית: שינתה {{ s.third_changed }} קטעים{% if s.third_rejected %}, {{ s.third_rejected }} נדחו כי שינו יותר מדי{% endif %}. <ins style="background:#dcfce7;text-decoration:none">ירוק</ins> = נוסף/הוחלף מול התיקון, <del style="color:#b91c1c">אדום מחוק</del> = הוסר.</div>
+    {% if 'judge' in s.selected %}<div class="note">שופט: שינה {{ s.judge_changed }} קטעים מול התמלול של OpenAI · דמיון Gemini מול OpenAI {{ pct(s.sim.gemini_raw) }}. בעמודת השופט <ins style="background:#dcfce7;text-decoration:none">ירוק</ins> = שונה מ-OpenAI (לרוב נלקח מ-Gemini), <del style="color:#b91c1c">אדום מחוק</del> = מה ש-OpenAI כתב במקום.</div>{% endif %}
+    {% if 'third' in s.selected %}<div class="note">קריאה שלישית: שינתה {{ s.third_changed }} קטעים{% if s.third_rejected %}, {{ s.third_rejected }} נדחו כי שינו יותר מדי{% endif %}. <ins style="background:#dcfce7;text-decoration:none">ירוק</ins> = נוסף/הוחלף מול התיקון, <del style="color:#b91c1c">אדום מחוק</del> = הוסר.</div>{% endif %}
   </div>
   <div class="grid" id="grid">
     <div class="hd">זמן</div>
@@ -718,7 +900,7 @@ a{color:#0a58ca}
       {% elif e.status == 'error' %}<span style="color:#b91c1c">שגיאה: {{ e.error }}</span>{% else %}רץ...{% endif %}</small></div>{% endfor %}
     {% for seg in s.segments %}
       <div class="t" data-start="{{ seg.start }}" data-end="{{ seg.end }}" title="לנגן מכאן">▶ {{ fmt(seg.start) }}</div>
-      {% for n in engines %}<div class="c" data-n="{{ names[n] }}" data-start="{{ seg.start }}">{% if n == 'third' and seg.third_html %}{{ seg.third_html|safe }}{% if seg.third_note %}<div class="tn">{{ seg.third_note }}</div>{% endif %}{% else %}{{ seg.get(n, '') }}{% endif %}</div>{% endfor %}
+      {% for n in engines %}<div class="c" data-n="{{ names[n] }}" data-start="{{ seg.start }}">{% if n in ('third', 'judge') and seg[n ~ '_html'] %}{{ seg[n ~ '_html']|safe }}{% if seg[n ~ '_note'] %}<div class="tn">{{ seg[n ~ '_note'] }}</div>{% endif %}{% else %}{{ seg.get(n, '') }}{% endif %}</div>{% endfor %}
     {% endfor %}
   </div>
   <script>
@@ -754,14 +936,24 @@ a{color:#0a58ca}
     <label>מילים צפויות - מילה או ביטוי בכל שורה (לעמודה המשופרת)</label>
     <textarea name="keywords" rows="7">{{ default_keywords }}</textarea>
     <p class="note">כדאי להשאיר רק מילים שבאמת נאמרות - מילה ברשימה שלא נאמרה עלולה "להישמע" בטעות.</p>
+    {% if preset %}
+    {% for n in preset_engines %}<input type="hidden" name="engines" value="{{ n }}">{% endfor %}
+    <input type="hidden" name="fix_effort" value="high">
+    {% else %}
+    <label>אילו עמודות להריץ</label>
+    <div class="note" style="display:grid;gap:4px;margin-top:6px">
+      {% for n in all_engines %}<label style="font-weight:normal;margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" name="engines" value="{{ n }}" style="width:auto;margin:0" {% if n in default_selected %}checked{% endif %}> {{ names[n] }}</label>{% endfor %}
+    </div>
+    <p class="note">השופט משתמש בתמלול של Gemini ובתמלול של OpenAI עם הרקע (גם אם לא בחרת להציג אותם), ומקבל את השמע של כל קטע כדי להכריע. כל עמודה עולה כסף - כדאי לבחור רק את מה שבודקים.</p>
     <label>עומק החשיבה בשלב התיקון</label>
     <select name="fix_effort"><option value="high">גבוה (מדויק יותר, איטי ויקר יותר)</option><option value="medium">בינוני</option><option value="low">נמוך</option></select>
+    {% endif %}
     <label>שליחת ההשוואה למייל</label>
     <input type="email" name="email" value="{{ default_email }}" required>
-    <button type="submit">הרץ השוואה</button>
+    <button type="submit">{{ 'הרץ תמלול משולב' if preset else 'הרץ השוואה' }}</button>
   </form>
   {% if history %}
-  <div class="card"><b>השוואות קודמות</b>
+  <div class="card"><b>{{ 'תמלולים קודמים' if preset else 'השוואות קודמות' }}</b>
     <table><tr><th>תאריך</th><th>קובץ</th><th>אורך</th>{% for n in engines %}<th>{{ names[n] }}</th>{% endfor %}</tr>
     {% for h in history %}<tr><td>{{ h.created_at }}</td>
       <td><a href="/compare/{{ h.id }}?access_code={{ access_code }}">{{ h.source }}</a></td>
@@ -772,7 +964,7 @@ a{color:#0a58ca}
 </div>
 </body></html>"""
 
-STATUS_NAMES = {'pending': 'רץ', 'done': 'הסתיים', 'error': 'שגיאה'}
+STATUS_NAMES = {'pending': 'רץ', 'done': 'הסתיים', 'error': 'שגיאה', 'skipped': '-'}
 
 GATE_HTML = """<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>השוואת תמלול</title>
@@ -792,7 +984,9 @@ def init_transcompare(app, *, require_access, default_email):
     def render(**kw):
         base = dict(message=None, ok=True, row=None, s=None, refresh=False, history=None, access_code='',
                     default_email=default_email, fmt=_fmt_secs, names=ENGINE_NAMES, langs=LANG_NAMES,
-                    st=STATUS_NAMES, engines=ENGINES, cols='1fr 1fr 1fr 1fr', default_context=DEFAULT_CONTEXT,
+                    st=STATUS_NAMES, engines=ENGINES, all_engines=ENGINES, default_selected=DEFAULT_SELECTED,
+                    cols='1fr 1fr 1fr 1fr', default_context=DEFAULT_CONTEXT, preset=False,
+                    preset_engines=JUDGE_PRESET, page_title='השוואת תמלול', base_path='/compare',
                     default_keywords=DEFAULT_KEYWORDS, pct=lambda v: f'{v}%' if v is not None else '-')
         base.update(kw)
         return render_template_string(PAGE_HTML, **base)
@@ -811,6 +1005,16 @@ def init_transcompare(app, *, require_access, default_email):
         if g:
             return g
         return render(access_code=request.args['access_code'], history=_list())
+
+    JUDGE_KW = dict(preset=True, page_title='תמלול משולב: Gemini + OpenAI + שופט', base_path='/judge')
+
+    @app.route('/judge', methods=['GET'])
+    def judge_page():
+        g = gate()
+        if g:
+            return g
+        hist = [h for h in _list(200) if (h.get('engines') or '') == ','.join(JUDGE_PRESET)][:50]
+        return render(access_code=request.args['access_code'], history=hist, engines=JUDGE_PRESET, **JUDGE_KW)
 
     @app.route('/compare/audio/<cid>', methods=['GET'])
     def compare_audio(cid):
@@ -832,8 +1036,10 @@ def init_transcompare(app, *, require_access, default_email):
                           history=_list()), 404
         s = summary(row)
         running = 'pending' in (row.get(f'{n}_status') for n in ENGINES)
-        cols = ' '.join(f'{s["widths"][n]}fr' for n in ENGINES)
-        return render(access_code=request.args['access_code'], row=row, s=s, refresh=running, cols=cols)
+        cols = ' '.join(f'{s["widths"][n]}fr' for n in s['selected'])
+        extra = JUDGE_KW if (row.get('engines') or '') == ','.join(JUDGE_PRESET) else {}
+        return render(access_code=request.args['access_code'], row=row, s=s, refresh=running, cols=cols,
+                      engines=s['selected'], **extra)
 
     @app.route('/compare/run', methods=['POST'])
     def compare_run():
@@ -870,7 +1076,11 @@ def init_transcompare(app, *, require_access, default_email):
                 'output_language': request.form.get('output_language', 'he'),
                 'context': (request.form.get('context') or '').strip()[:2000],
                 'keywords': (request.form.get('keywords') or '')[:8000], 'fix_effort': effort}
-        vals.update({f'{n}_status': 'pending' for n in ENGINES})
+        chosen = [e for e in request.form.getlist('engines') if e in ENGINES] or list(DEFAULT_SELECTED)
+        vals['engines'] = ','.join(chosen)
+        # עמודה שלא נבחרה - 'skipped'; Gemini והתמלול הבסיסי של OpenAI רצים בכל זאת אם השופט צריך אותם
+        vals.update({f'{n}_status': ('pending' if n in chosen or (n == 'gemini' and 'judge' in chosen) else 'skipped')
+                     for n in ENGINES})
         with _lock:
             conn = _db()
             conn.execute(f'INSERT INTO comparisons ({", ".join(vals)}) VALUES ({", ".join("?" * len(vals))})',

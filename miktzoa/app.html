@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מקצוע ביד</title>
+<meta name="csrf" content="__CSRF__">
+<meta name="base" content="__BASE__">
+<style>
+/* מקצוע ביד */
+:root {
+  --bg: #EEF2F5; --surface: #FFFFFF; --ink: #102331; --ink-2: #4A5B68; --line: #D6DEE5;
+  --brand: #0B6E99; --brand-ink: #08506F; --brand-soft: #E3F1F7;
+  --hat: #F2B33D; --hat-soft: #FDF3DC; --ok: #1E7B4F; --ok-soft: #E3F4EA; --danger: #C2412D; --danger-soft: #FBE9E5;
+  --r-lg: 18px; --r: 12px; --r-sm: 8px;
+  --sh: 0 1px 2px rgba(16,35,49,.06), 0 6px 18px rgba(16,35,49,.06);
+  --font: "Assistant", "Heebo", "Segoe UI", "Rubik", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.55; overflow-x: hidden; }
+a { color: var(--brand-ink); }
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { line-height: 1.2; margin: 0; letter-spacing: -.3px; }
+:focus-visible { outline: 3px solid var(--hat); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+.muted { color: var(--ink-2); }
+.small { font-size: 14px; }
+.hidden { display: none !important; }
+
+/* header */
+.top { background: var(--ink); color: #fff; position: sticky; top: 0; z-index: 30; }
+.top .wrap { display: flex; align-items: center; gap: 18px; min-height: 62px; flex-wrap: wrap; }
+.brandname { color: #fff; text-decoration: none; font-weight: 800; font-size: 22px; letter-spacing: -.5px; }
+.brandname span { color: var(--hat); }
+.nav { display: flex; gap: 2px; flex-wrap: wrap; }
+.nav a { color: #C9D6DF; text-decoration: none; padding: 7px 12px; border-radius: 999px; font-weight: 600; }
+.nav a:hover, .nav a.on { color: #fff; background: rgba(255,255,255,.1); }
+.top .grow { flex: 1; }
+.top select { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25); color: #fff; border-radius: 999px; padding: 5px 10px; }
+.top select option { color: var(--ink); }
+.userbox { display: flex; align-items: center; gap: 8px; }
+.pill-count { background: var(--hat); color: var(--ink); border-radius: 999px; padding: 0 7px; font-size: 12px; font-weight: 800; margin-right: 4px; }
+
+/* buttons & fields */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-sm); padding: 9px 18px; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn:hover { border-color: var(--ink-2); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: var(--brand-ink); }
+.btn.hat { background: var(--hat); border-color: var(--hat); color: var(--ink); }
+.btn.ghost-light { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); }
+.btn.danger { color: var(--danger); }
+.btn.sm { padding: 5px 12px; font-size: 14px; }
+.btn.block { width: 100%; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+label.f { display: grid; gap: 5px; }
+label.f > span { font-size: 14px; font-weight: 700; color: var(--ink-2); }
+label.f > span i { color: var(--danger); font-style: normal; }
+input[type=text], input[type=email], input[type=tel], input[type=password], input[type=number], input[type=search], input[type=datetime-local], select, textarea {
+  width: 100%; border: 1.5px solid var(--line); border-radius: var(--r-sm); padding: 9px 11px; background: #fff; min-height: 42px;
+}
+textarea { min-height: 96px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.checks { display: flex; flex-wrap: wrap; gap: 8px; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; border: 1.5px solid var(--line); border-radius: 999px; padding: 4px 12px; background: #fff; cursor: pointer; font-size: 15px; }
+.checks label:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-ink); font-weight: 700; }
+.checks input { accent-color: var(--brand); }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.stack { display: grid; gap: 14px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* surfaces */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; box-shadow: var(--sh); }
+.card h2 { font-size: 22px; margin-bottom: 4px; }
+.sec { margin: 34px 0 0; }
+.sec > h2 { font-size: 26px; margin-bottom: 14px; }
+.page-title { font-size: 34px; font-weight: 800; margin: 26px 0 6px; }
+.lead { color: var(--ink-2); margin: 0 0 20px; font-size: 18px; }
+.tag { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 1px 9px; border-radius: 999px; background: var(--bg); color: var(--ink-2); border: 1px solid var(--line); }
+.tag.brand { background: var(--brand-soft); color: var(--brand-ink); border-color: transparent; }
+.tag.hat { background: var(--hat-soft); color: #7A5410; border-color: transparent; }
+.tag.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.tag.danger { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+.notice { border-radius: var(--r); padding: 12px 16px; font-weight: 600; border: 1px solid; margin: 12px 0; }
+.notice.warn { background: var(--hat-soft); border-color: #EBCB85; color: #6B4A0E; }
+.notice.info { background: var(--brand-soft); border-color: #B7DAEA; color: var(--brand-ink); }
+.notice.bad { background: var(--danger-soft); border-color: #EFC2B8; color: var(--danger); }
+.stars { color: #C98A10; letter-spacing: 1px; }
+.empty { text-align: center; padding: 34px 20px; color: var(--ink-2); background: var(--surface); border: 1.5px dashed var(--line); border-radius: var(--r-lg); }
+
+/* hero */
+.hero { background: var(--ink); color: #fff; padding: 46px 0 54px; }
+.hero h1 { font-size: clamp(36px, 5.4vw, 64px); font-weight: 800; letter-spacing: -1.5px; }
+.hero h1 .u { box-shadow: inset 0 -.22em 0 var(--hat); }
+.hero p { color: #C9D6DF; font-size: 19px; max-width: 58ch; margin: 12px 0 26px; }
+.searchbar { background: #fff; border-radius: var(--r-lg); padding: 10px; display: grid; grid-template-columns: 2fr 1.2fr 1.2fr auto; gap: 8px; color: var(--ink); box-shadow: 0 14px 40px rgba(0,0,0,.25); }
+.searchbar input, .searchbar select { border-color: transparent; background: var(--bg); }
+.fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.field-tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; text-decoration: none; color: var(--ink); display: grid; gap: 2px; }
+.field-tile:hover { border-color: var(--brand); }
+.field-tile b { font-size: 17px; }
+.how { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.how ol { margin: 10px 0 0; padding-right: 22px; display: grid; gap: 8px; }
+.trust { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; text-align: center; }
+.trust b { display: block; font-size: 34px; font-weight: 800; color: var(--brand-ink); }
+
+/* course card */
+.courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.cc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; display: flex; flex-direction: column; text-decoration: none; color: var(--ink); box-shadow: var(--sh); transition: transform .15s ease, box-shadow .15s ease; }
+.cc:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(16,35,49,.12); }
+.cc .band { height: 6px; background: var(--brand); }
+.cc.hl .band { background: var(--hat); height: 8px; }
+.cc .in { padding: 14px 16px 16px; display: grid; gap: 6px; flex: 1; }
+.cc .t { font-weight: 800; font-size: 18px; line-height: 1.3; }
+.cc .who { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14.5px; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-ink); display: grid; place-items: center; font-weight: 800; flex: none; }
+.avatar.f { background: #F4E8F1; color: #7A2E66; }
+.avatar.lg { width: 72px; height: 72px; font-size: 28px; }
+.cc .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.cc .cc-foot { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); padding-top: 9px; margin-top: auto; }
+.price { font-weight: 800; font-size: 20px; }
+.price small { font-weight: 600; font-size: 13px; color: var(--ink-2); }
+
+/* search */
+.search-layout { display: grid; grid-template-columns: 270px 1fr; gap: 22px; align-items: start; margin-top: 18px; }
+.filters { position: sticky; top: 80px; }
+.filters .stack { gap: 12px; }
+.results-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
+
+/* course page */
+.course-layout { display: grid; grid-template-columns: 1fr 330px; gap: 24px; align-items: start; margin-top: 22px; }
+.side-sticky { position: sticky; top: 80px; display: grid; gap: 14px; }
+.syllabus { list-style: none; padding: 0; margin: 0; counter-reset: s; display: grid; gap: 8px; }
+.syllabus li { counter-increment: s; display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: start; background: var(--bg); border-radius: var(--r); padding: 10px 12px; }
+.syllabus li::before { content: counter(s); width: 30px; height: 30px; border-radius: 8px; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 800; }
+.syllabus b { display: block; }
+.outcomes { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.outcomes li::before { content: "✓"; color: var(--ok); font-weight: 800; margin-left: 8px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.facts div { background: var(--bg); border-radius: var(--r); padding: 10px 12px; }
+.facts dt { font-size: 13px; color: var(--ink-2); }
+.facts dd { margin: 0; font-weight: 700; }
+.review { border-top: 1px solid var(--line); padding: 12px 0; }
+.review .reply { background: var(--bg); border-radius: var(--r); padding: 8px 12px; margin-top: 8px; font-size: 15px; }
+
+/* panels with side menu */
+.panel-layout { display: grid; grid-template-columns: 220px 1fr; gap: 22px; align-items: start; margin-top: 22px; }
+.sidemenu { display: grid; gap: 2px; position: sticky; top: 80px; }
+.sidemenu a { text-decoration: none; color: var(--ink); padding: 9px 12px; border-radius: var(--r-sm); font-weight: 600; display: flex; justify-content: space-between; }
+.sidemenu a:hover { background: var(--surface); }
+.sidemenu a.on { background: var(--ink); color: #fff; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+.stat b { display: block; font-size: 30px; font-weight: 800; }
+.stat span { color: var(--ink-2); font-size: 14px; }
+.list { display: grid; gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.item .grow { flex: 1; min-width: 200px; }
+.item .t { font-weight: 800; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 16px; border-bottom: 1px solid var(--line); }
+.tabs a { text-decoration: none; color: var(--ink-2); padding: 9px 14px; font-weight: 700; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tabs a.on { color: var(--ink); border-bottom-color: var(--brand); }
+table.t { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--r); overflow: hidden; }
+table.t th, table.t td { text-align: right; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.t th { background: var(--bg); font-size: 14px; color: var(--ink-2); }
+.scroll-x { overflow-x: auto; }
+
+/* lead card */
+.lead-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; display: grid; gap: 8px; }
+.lead-card.new { border-color: var(--hat); box-shadow: 0 0 0 2px var(--hat-soft); }
+.lock { display: inline-flex; gap: 6px; align-items: center; background: var(--bg); border-radius: var(--r-sm); padding: 6px 10px; color: var(--ink-2); font-size: 14px; }
+.blur { filter: blur(5px); user-select: none; }
+
+/* wallet */
+.packs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.pack { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r-lg); padding: 18px; text-align: center; display: grid; gap: 6px; }
+.pack.pop { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.pack .amt { font-size: 32px; font-weight: 800; }
+.balance { display: flex; align-items: baseline; gap: 12px; }
+.balance b { font-size: 46px; font-weight: 800; color: var(--brand-ink); }
+
+/* messages */
+.chat { display: grid; grid-template-columns: 290px 1fr; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; min-height: 520px; margin-top: 18px; }
+.convs { border-left: 1px solid var(--line); overflow-y: auto; }
+.conv { display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--ink); align-items: center; }
+.conv.on { background: var(--brand-soft); }
+.conv .grow { flex: 1; min-width: 0; }
+.conv .last { color: var(--ink-2); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread { display: flex; flex-direction: column; }
+.thread-head { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.msgs { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; background: var(--bg); max-height: 440px; }
+.msg { max-width: 72%; padding: 8px 12px; border-radius: 14px; background: #fff; border: 1px solid var(--line); align-self: flex-end; }
+.msg.me { align-self: flex-start; background: var(--brand); color: #fff; border-color: var(--brand); }
+.msg time { display: block; font-size: 11.5px; opacity: .7; }
+.composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+
+/* video room */
+.room { background: #0A1620; color: #fff; border-radius: var(--r-lg); overflow: hidden; display: grid; grid-template-columns: 1fr 300px; min-height: 540px; margin-top: 18px; }
+.stage video.remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #13232F; border: 0; border-radius: 0; }
+.stage .status { position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,.45); padding: 4px 12px; border-radius: 999px; font-size: 13px; }
+.loading { text-align: center; padding: 80px 0; color: var(--ink-2); }
+.msg a { color: inherit; }
+.stage { position: relative; display: grid; place-items: center; background: #13232F; }
+.stage .other { text-align: center; color: #9FB3C2; }
+.stage .other .avatar { margin: 0 auto 10px; width: 96px; height: 96px; font-size: 36px; }
+.stage video, .stage .self { position: absolute; bottom: 16px; left: 16px; width: 200px; height: 130px; border-radius: 12px; background: #24394A; object-fit: cover; border: 2px solid rgba(255,255,255,.2); display: grid; place-items: center; color: #9FB3C2; font-size: 14px; }
+.room-bar { position: absolute; bottom: 16px; right: 50%; transform: translateX(50%); display: flex; gap: 8px; }
+.room-bar button { background: rgba(255,255,255,.12); border: 0; color: #fff; border-radius: 999px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+.room-bar button.off { background: var(--danger); }
+.room-side { background: #fff; color: var(--ink); padding: 16px; overflow-y: auto; }
+.room-side label { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+
+/* modal & toast */
+.modal-bg { position: fixed; inset: 0; background: rgba(10,22,32,.55); display: grid; place-items: center; z-index: 60; padding: 16px; }
+.modal { background: #fff; border-radius: var(--r-lg); width: min(560px, 100%); max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.modal h2 { font-size: 24px; margin-bottom: 4px; }
+.modal .acts { display: flex; gap: 10px; justify-content: flex-start; margin-top: 18px; }
+.toast { position: fixed; bottom: 80px; right: 50%; transform: translateX(50%); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 999px; font-weight: 700; z-index: 70; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+.nedarim { border: 2px solid #2E8A88; border-radius: var(--r); padding: 16px; display: grid; gap: 10px; }
+.nedarim .brandline { color: #2E8A88; font-weight: 800; }
+
+/* demo bar */
+.demobar { position: fixed; bottom: 0; right: 0; left: 0; background: var(--hat); color: var(--ink); z-index: 50; }
+.demobar .wrap { display: flex; gap: 10px; align-items: center; min-height: 52px; flex-wrap: wrap; font-size: 14.5px; }
+.demobar select { width: auto; min-height: 34px; padding: 4px 8px; }
+.demobar b { font-weight: 800; }
+
+/* footer */
+.foot { background: var(--ink); color: #9FB3C2; margin-top: 50px; padding: 26px 0; font-size: 14px; }
+.foot .wrap { display: flex; gap: 20px; justify-content: space-between; flex-wrap: wrap; }
+.foot a { color: #C9D6DF; }
+
+/* steps (join wizard) */
+.steps { display: flex; gap: 8px; margin: 10px 0 18px; }
+.steps div { flex: 1; height: 6px; border-radius: 999px; background: var(--line); }
+.steps div.on { background: var(--brand); }
+
+@media (max-width: 900px) {
+  .search-layout, .course-layout, .panel-layout, .how, .chat, .room { grid-template-columns: 1fr; }
+  .filters, .side-sticky, .sidemenu { position: static; }
+  .sidemenu { display: flex; overflow-x: auto; }
+  .stats, .packs { grid-template-columns: 1fr 1fr; }
+  .searchbar { grid-template-columns: 1fr 1fr; }
+  .searchbar .q { grid-column: 1 / -1; }
+  .convs { border-left: 0; border-bottom: 1px solid var(--line); max-height: 200px; }
+  .room-side { max-height: 260px; }
+}
+@media (max-width: 560px) {
+  .wrap { padding: 0 14px; }
+  .g2, .g3 { grid-template-columns: 1fr; }
+  .page-title { font-size: 28px; }
+  .top .wrap { padding-top: 8px; padding-bottom: 8px; }
+  .nav { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  .searchbar { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .cc { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap" id="top"></div></header>
+<main id="app"></main>
+<footer class="foot"><div class="wrap">
+  <span>מקצוע ביד · לומדים מקצוע ממי שעובד בו</span>
+  <span><a href="#/terms">תקנון</a> · <a href="#/terms">פרטיות</a></span>
+</div></footer>
+<div id="modal"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   מקצוע ביד. הדפים רצים בדפדפן; הנתונים והכללים בשרת (/miktzoa/api).
+   ===================================================================== */
+const SITE = 'מקצוע ביד';
+const CSRF = document.querySelector('meta[name=csrf]').content;
+const BASE = document.querySelector('meta[name=base]').content;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nis = n => '₪' + Number(n || 0).toLocaleString('he-IL');
+const uid = p => p + Math.random().toString(36).slice(2, 8);
+const now = () => new Date().toISOString();
+const daysAgo = d => new Date(Date.now() - d * 864e5).toISOString();
+const fmtDate = iso => { const d = new Date(iso); return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' }); };
+const fmtDT = iso => { const d = new Date(iso); return d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'numeric' }) + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
+const ago = iso => { const m = Math.round((Date.now() - new Date(iso)) / 6e4); if (m < 60) return `לפני ${Math.max(m, 1)} דק׳`; const hh = Math.round(m / 60); if (hh < 24) return `לפני ${hh} שע׳`; return `לפני ${Math.round(hh / 24)} ימים`; };
+
+const MODES = { front: 'פרונטלי', video: 'וידאו באתר', phone: 'טלפוני' };
+const TRACKS = { practical: 'ידע מעשי', exam: 'הכנה למבחן רישוי', mentor: 'חונכות' };
+const LEVELS = { begin: 'מתחילים', adv: 'מתקדמים' };
+const SLEVEL = { none: 'בלי רקע', some: 'קצת רקע', working: 'כבר עובד בתחום' };
+const STARTS = { week: 'השבוע', month: 'החודש', flex: 'גמיש' };
+const CITIES = ['ירושלים', 'בני ברק', 'בית שמש', 'מודיעין עילית', 'ביתר עילית', 'אלעד', 'אשדוד', 'חיפה', 'צפת', 'טבריה', 'רכסים', 'עמנואל', 'חריש', 'נתיבות', 'פתח תקווה', 'נתניה'];
+const LEAD_STATUS = { new: 'חדש', open: 'נפתח', declined: 'לא מתאים', expired: 'פג תוקף' };
+const PROGRESS = { '': 'לא סומן', contacted: 'יצרתי קשר', scheduled: 'נקבע שיעור', learning: 'התחלנו ללמוד', unreachable: 'לא הצלחתי להשיג' };
+
+/* ---------------- server ---------------- */
+let DB = null;
+const GKEY = 'miktzoa-guest-gender';
+function guestGender() { try { return localStorage.getItem(GKEY) || ''; } catch (e) { return ''; } }
+function setGuestGender(v) { try { localStorage.setItem(GKEY, v); } catch (e) { /* ignore */ } DB.session.guestGender = v; }
+function setState(st) { DB = st; DB.session.guestGender = guestGender(); }
+async function loadState() {
+  const r = await fetch(BASE + '/api/state', { credentials: 'same-origin' });
+  setState(await r.json());
+}
+/* every change goes through the server; returns the answer or null (the error is shown as a toast) */
+let busy = false;
+async function api(action, body = {}, form = null) {
+  if (busy) return null;
+  busy = true; document.body.style.cursor = 'progress';
+  let j = null;
+  try {
+    const opt = { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': CSRF } };
+    if (form) opt.body = form; else { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    const r = await fetch(BASE + '/api/' + action, opt);
+    j = await r.json();
+  } catch (e) { toast('אין חיבור לשרת. נסה שוב.'); }
+  busy = false; document.body.style.cursor = '';
+  if (!j) return null;
+  if (j.state) setState(j.state);
+  if (!j.ok) { toast(j.error || 'משהו השתבש'); return null; }
+  return j;
+}
+function withFile(json, file) { const fd = new FormData(); fd.append('json', JSON.stringify(json)); if (file) fd.append('file', file); return fd; }
+
+const byId = (arr, id) => DB[arr].find(x => x.id === id);
+const me = () => DB.session.userId ? byId('users', DB.session.userId) : null;
+const myGender = () => (me() ? me().gender : DB.session.guestGender);
+const field = id => byId('fields', id) || { name: '' };
+const teacherOf = c => byId('users', c.teacherId);
+const courseReviews = cid => DB.reviews.filter(r => r.courseId === cid && !r.hidden);
+const avg = rs => rs.length ? rs.reduce((s, r) => s + r.stars, 0) / rs.length : 0;
+const teacherReviews = tid => DB.reviews.filter(r => !r.hidden && (byId('courses', r.courseId) || {}).teacherId === tid);
+const isTeacher = u => !!(u && u.teacher && u.teacher.status === 'approved');
+const short = name => { const p = (name || '').split(' '); return p[0] + (p[1] ? ' ' + p[1][0] + '.' : ''); };
+const initials = name => (name || '?').trim()[0];
+const avatar = (u, cls = '') => `<span class="avatar ${u && u.gender === 'f' ? 'f' : ''} ${cls}">${h(initials(u && u.name))}</span>`;
+const starsTxt = n => '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(n));
+
+/* gender rule: everyone sees everything; contact only man↔man, woman↔woman */
+function canContact(teacher) {
+  const g = myGender();
+  if (!g) return { ok: false, why: 'כדי לפנות למורה צריך קודם לבחור מגדר בשדה "מגדר" למעלה.' };
+  if (teacher.gender !== g) return { ok: false, why: teacher.gender === 'm' ? 'זה קורס של מורה. פנייה אפשרית רק בין גבר לגבר ואישה לאישה.' : 'זה קורס של מורה אישה. פנייה אפשרית רק בין גבר לגבר ואישה לאישה.' };
+  return { ok: true };
+}
+
+/* ---------------- UI helpers ---------------- */
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+function modal(html) { $('#modal').innerHTML = `<div class="modal-bg" data-close-bg><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; const f = $('#modal input, #modal select, #modal textarea'); if (f) f.focus(); }
+function closeModal() { $('#modal').innerHTML = ''; }
+document.addEventListener('click', e => { if (e.target.matches('[data-close-bg]') || e.target.closest('[data-close]')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
+const formData = form => Object.fromEntries([...new FormData(form).entries()].map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v]));
+const checked = (form, name) => $$(`input[name="${name}"]:checked`, form).map(i => i.value);
+const opts = (obj, sel, first) => (first !== undefined ? `<option value="">${h(first)}</option>` : '') + Object.entries(obj).map(([k, v]) => `<option value="${h(k)}" ${k === sel ? 'selected' : ''}>${h(v)}</option>`).join('');
+const fieldOpts = (sel, first) => (first !== undefined ? `<option value="">${h(first)}</option>` : '') + DB.fields.map(f => `<option value="${f.id}" ${f.id === sel ? 'selected' : ''}>${h(f.name)}</option>`).join('');
+const cityOpts = (sel, first) => (first !== undefined ? `<option value="">${h(first)}</option>` : '') + CITIES.map(c => `<option ${c === sel ? 'selected' : ''}>${h(c)}</option>`).join('');
+const modeChecks = (name, sel = [], only) => `<div class="checks">${Object.entries(MODES).filter(([k]) => !only || only.includes(k)).map(([k, v]) => `<label><input type="checkbox" name="${name}" value="${k}" ${sel.includes(k) ? 'checked' : ''}> ${v}</label>`).join('')}</div>`;
+function requireLogin(next) { if (me()) return true; go('#/login?next=' + encodeURIComponent(next || location.hash)); return false; }
+
+/* ---------------- header & demo bar ---------------- */
+function renderTop() {
+  const u = me(), path = location.hash.split('?')[0];
+  const on = p => path.startsWith(p) ? 'on' : '';
+  const unread = u ? DB.messages.filter(m => m.to === u.id && !m.read).length : 0;
+  $('#top').innerHTML = `
+    <a class="brandname" href="#/">מקצוע<span> ביד</span></a>
+    <nav class="nav">
+      <a href="#/search" class="${on('#/search')}">קורסים</a>
+      <a href="#/requests" class="${on('#/requests')}">לוח בקשות</a>
+      ${!u || !u.teacher ? `<a href="#/join" class="${on('#/join')}">הצטרף לצוות שלנו</a>` : ''}
+      ${isTeacher(u) ? `<a href="#/dash" class="${on('#/dash')}">לוח מורה</a>` : ''}
+      ${u && u.role === 'admin' ? `<a href="#/admin" class="${on('#/admin')}">ניהול</a>` : ''}
+    </nav>
+    <span class="grow"></span>
+    ${u ? '' : `<label class="row small" style="gap:6px;flex-wrap:nowrap;white-space:nowrap">מגדר <select id="guest-gender" aria-label="מגדר" style="width:auto"><option value="">בחר</option><option value="m" ${DB.session.guestGender === 'm' ? 'selected' : ''}>זכר</option><option value="f" ${DB.session.guestGender === 'f' ? 'selected' : ''}>נקבה</option></select></label>`}
+    <div class="userbox">
+      ${u ? `<a class="btn sm ghost-light" href="#/messages">הודעות${unread ? `<span class="pill-count">${unread}</span>` : ''}</a>
+             <a class="btn sm ghost-light" href="#/me">${h(short(u.name))}</a>
+             <button class="btn sm ghost-light" data-act="logout">יציאה</button>`
+          : `<a class="btn sm hat" href="#/login">התחברות</a>`}
+    </div>`;
+  const gg = $('#guest-gender');
+  if (gg) gg.onchange = () => { setGuestGender(gg.value); route(); };
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-act]');
+  if (!a) return;
+  const act = a.dataset.act;
+  if (act === 'logout') api('auth/logout').then(j => { if (j) { go('#/'); toast('יצאת מהחשבון'); } });
+});
+
+/* ---------------- cards ---------------- */
+function courseCard(c) {
+  const t = teacherOf(c), rs = courseReviews(c.id), a = avg(rs);
+  return `<a class="cc ${c.highlighted ? 'hl' : ''}" href="#/course/${c.id}">
+    <div class="band"></div>
+    <div class="in">
+      <div class="tags"><span class="tag brand">${h(field(c.fieldId).name)}</span>${c.highlighted ? '<span class="tag hat">מודגש</span>' : ''}${field(c.fieldId).regulated ? '<span class="tag">מקצוע מוסדר</span>' : ''}</div>
+      <div class="t">${h(c.title)}</div>
+      <div class="who">${avatar(t)}<span>${h(t.name)}${t.teacher.verified ? ' · <b style="color:var(--ok)">מאומת</b>' : ''}<br><span class="small">${t.teacher.years} שנות ניסיון · ${h(t.city)}</span></span></div>
+      <div class="tags">${c.modes.map(m => `<span class="tag">${MODES[m]}</span>`).join('')}<span class="tag">${TRACKS[c.track]}</span><span class="tag">${c.sessions} מפגשים</span></div>
+      <div class="cc-foot"><span class="price">${nis(c.price)} <small>${c.priceType === 'lesson' ? 'לשיעור' : 'לכל הקורס'}</small></span>
+        <span class="small">${rs.length ? `<span class="stars">★</span> ${a.toFixed(1)} (${rs.length})` : '<span class="muted">חדש</span>'}</span></div>
+    </div></a>`;
+}
+
+/* =====================================================================
+   PAGES
+   ===================================================================== */
+const pages = {};
+
+/* ---------- home ---------- */
+pages.home = () => {
+  const active = DB.courses.filter(c => c.status === 'active');
+  const featured = active.filter(c => c.highlighted).slice(0, 8);
+  const counts = id => active.filter(c => c.fieldId === id).length;
+  const u = me();
+  const reqs = isTeacher(u) ? DB.requests.filter(r => r.status === 'open' && u.teacher.fields.includes(r.fieldId)).slice(0, 5) : [];
+  const teachers = DB.users.filter(isTeacher);
+  return `
+  <section class="hero"><div class="wrap">
+    <h1>לומדים מקצוע <span class="u">בקלות</span></h1>
+    <p>שיעורים פרטיים ממי שעובד במקצוע כל יום. תוכן מעשי, בלי תוספות מיותרות, ובמחיר של שיעור ולא של מכללה.</p>
+    <form class="searchbar" id="home-search">
+      <input class="q" type="search" name="q" list="field-list" placeholder="מה רוצים ללמוד? למשל: חשמל, הנהלת חשבונות" aria-label="מה רוצים ללמוד">
+      <select name="city" aria-label="אזור">${cityOpts('', 'בכל הארץ')}</select>
+      <select name="mode" aria-label="אופן לימוד">${opts(MODES, '', 'כל אופני הלימוד')}</select>
+      <button class="btn primary">חיפוש</button>
+    </form>
+    <datalist id="field-list">${DB.fields.map(f => `<option value="${h(f.name)}">`).join('')}</datalist>
+  </div></section>
+  <div class="wrap">
+    <section class="sec"><h2>תחומים פופולריים</h2>
+      <div class="fields-grid">${DB.fields.map(f => `<a class="field-tile" href="#/search?field=${f.id}"><b>${h(f.name)}</b><span class="muted small">${counts(f.id)} קורסים</span></a>`).join('')}</div>
+    </section>
+    <section class="sec how">
+      <div class="card"><h2>לתלמידים</h2><ol><li>מחפשים קורס לפי תחום, אזור ואופן לימוד.</li><li>שולחים פנייה למורה. הפנייה חינם.</li><li>לומדים פרונטלית, בטלפון, או בווידאו כאן באתר.</li></ol></div>
+      <div class="card"><h2>למורים</h2><ol><li>נרשמים ומפרסמים קורס עם תוכנית לימוד מפורטת.</li><li>מקבלים פניות מתלמידים שמתאימים לכם.</li><li>משלמים רק על פנייה שבחרתם לפתוח.</li></ol>
+        <a class="btn primary" href="#/join" style="margin-top:12px">הצטרף לצוות שלנו</a></div>
+    </section>
+    ${featured.length ? `<section class="sec"><h2>קורסים מודגשים</h2><div class="courses">${featured.map(courseCard).join('')}</div></section>` : ''}
+    ${reqs.length ? `<section class="sec"><h2>בקשות חדשות בתחומים שלך</h2><div class="list">${reqs.map(requestItem).join('')}</div></section>` : ''}
+    <section class="sec card trust">
+      <div><b>${teachers.filter(t => t.teacher.verified).length}</b>מורים מאומתים</div>
+      <div><b>${DB.fields.length}</b>תחומים</div>
+      <div><b>${DB.reviews.filter(r => !r.hidden).length}</b>ביקורות של תלמידים</div>
+    </section>
+  </div>`;
+};
+pages.home.after = () => {
+  $('#home-search').onsubmit = e => {
+    e.preventDefault();
+    const d = formData(e.target), f = DB.fields.find(x => x.name === d.q);
+    const p = new URLSearchParams();
+    if (f) p.set('field', f.id); else if (d.q) p.set('q', d.q);
+    if (d.city) p.set('city', d.city); if (d.mode) p.set('mode', d.mode);
+    go('#/search?' + p.toString());
+  };
+  if (!me() && !DB.session.guestGender && !sessionStorage.getItem('gender-asked')) {
+    try { sessionStorage.setItem('gender-asked', '1'); } catch (e) { /* ignore */ }
+    modal(`<h2>ברוכים הבאים</h2><p class="muted">כדי שנוכל לחבר אותך למורה מתאים, בחר מגדר. אפשר גם לדלג ולבחור אחר כך מהסרגל למעלה.</p>
+      <label class="f"><span>מגדר</span><select id="g-pick"><option value="">בחר</option><option value="m">זכר</option><option value="f">נקבה</option></select></label>
+      <div class="acts"><button class="btn primary" id="g-ok">המשך</button><button class="btn" data-close>אחר כך</button></div>`);
+    $('#g-ok').onclick = () => { const v = $('#g-pick').value; if (!v) return toast('בחר זכר או נקבה'); setGuestGender(v); closeModal(); route(); };
+  }
+};
+
+/* ---------- search ---------- */
+pages.search = params => {
+  const p = Object.fromEntries(params);
+  const q = (p.q || '').toLowerCase();
+  let list = DB.courses.filter(c => c.status === 'active').filter(c => {
+    const t = teacherOf(c);
+    if (p.field && c.fieldId !== p.field) return false;
+    if (p.city && !(c.modes.includes('front') && (t.teacher.areas || [t.city]).includes(p.city))) return false;
+    if (p.modes && !p.modes.split(',').some(m => c.modes.includes(m))) return false;
+    if (p.mode && !c.modes.includes(p.mode)) return false;
+    if (p.pmin && c.price < +p.pmin) return false;
+    if (p.pmax && c.price > +p.pmax) return false;
+    if (p.tracks && !p.tracks.split(',').includes(c.track)) return false;
+    if (p.level && c.level !== p.level) return false;
+    if (p.verified && !t.teacher.verified) return false;
+    if (p.rating && avg(courseReviews(c.id)) < +p.rating) return false;
+    if (q && ![c.title, c.description, t.name, field(c.fieldId).name, ...c.syllabus.map(s => s.title)].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const sort = p.sort || 'best';
+  const score = c => (c.highlighted ? 1000 : 0) + avg(courseReviews(c.id)) * 10 + courseReviews(c.id).length;
+  if (sort === 'best') list.sort((a, b) => score(b) - score(a));
+  if (sort === 'new') list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (sort === 'price') list.sort((a, b) => a.price - b.price);
+  if (sort === 'rating') list.sort((a, b) => avg(courseReviews(b.id)) - avg(courseReviews(a.id)));
+  const ms = (p.modes || p.mode || '').split(',').filter(Boolean), ts = (p.tracks || '').split(',').filter(Boolean);
+  return `<div class="wrap">
+    <h1 class="page-title">${p.field ? 'קורסים ב' + h(field(p.field).name) : 'כל הקורסים'}</h1>
+    <div class="search-layout">
+      <form class="card filters" id="filters"><div class="stack">
+        <label class="f"><span>חיפוש חופשי</span><input type="search" name="q" value="${h(p.q || '')}" placeholder="שם קורס, נושא, מורה"></label>
+        <label class="f"><span>תחום</span><select name="field">${fieldOpts(p.field, 'כל התחומים')}</select></label>
+        <label class="f"><span>אזור (לפרונטלי)</span><select name="city">${cityOpts(p.city, 'בכל הארץ')}</select></label>
+        <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">אופן לימוד</span>${modeChecks('modes', ms)}</div>
+        <div class="g2"><label class="f"><span>מחיר מ-</span><input type="number" name="pmin" value="${h(p.pmin || '')}" min="0"></label><label class="f"><span>עד</span><input type="number" name="pmax" value="${h(p.pmax || '')}" min="0"></label></div>
+        <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">מסלול</span><div class="checks">${Object.entries(TRACKS).map(([k, v]) => `<label><input type="checkbox" name="tracks" value="${k}" ${ts.includes(k) ? 'checked' : ''}> ${v}</label>`).join('')}</div></div>
+        <label class="f"><span>רמה</span><select name="level">${opts(LEVELS, p.level, 'הכל')}</select></label>
+        <label class="row small"><input type="checkbox" name="verified" value="1" ${p.verified ? 'checked' : ''}> רק מורים מאומתים</label>
+        <label class="f"><span>דירוג מינימלי</span><select name="rating"><option value="">הכל</option><option value="3" ${p.rating === '3' ? 'selected' : ''}>3 ומעלה</option><option value="4" ${p.rating === '4' ? 'selected' : ''}>4 ומעלה</option></select></label>
+        <a class="small" href="#/search">ניקוי הסינון</a>
+      </div></form>
+      <div>
+        <div class="results-head"><b>נמצאו ${list.length} קורסים</b>
+          <label class="row small">מיון <select id="sort" style="width:auto">${opts({ best: 'מתאים ביותר', new: 'חדשים', price: 'מחיר עולה', rating: 'דירוג' }, sort)}</select></label></div>
+        ${list.length ? `<div class="courses">${list.map(courseCard).join('')}</div>` :
+          `<div class="empty"><b>לא נמצא קורס מתאים.</b><br>פרסם בקשה בלוח, ומורים מהתחום יפנו אליך.<br><br><a class="btn primary" href="#/requests/new${p.field ? '?field=' + p.field : ''}">פרסום בקשה בלוח</a></div>`}
+      </div>
+    </div></div>`;
+};
+pages.search.after = params => {
+  const f = $('#filters');
+  const apply = () => {
+    const d = formData(f), np = new URLSearchParams();
+    ['q', 'field', 'city', 'pmin', 'pmax', 'level', 'verified', 'rating'].forEach(k => { if (d[k]) np.set(k, d[k]); });
+    const ms = checked(f, 'modes'), ts = checked(f, 'tracks');
+    if (ms.length) np.set('modes', ms.join(',')); if (ts.length) np.set('tracks', ts.join(','));
+    const s = $('#sort').value; if (s !== 'best') np.set('sort', s);
+    const typing = document.activeElement && document.activeElement.name === 'q';
+    history.replaceState(null, '', '#/search?' + np.toString()); route();
+    if (typing) { const i = $('#filters [name=q]'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  };
+  f.onchange = apply;
+  $('[name=q]', f).oninput = debounce(apply, 400);
+  $('#sort').onchange = apply;
+};
+function debounce(fn, ms) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+/* ---------- course ---------- */
+let lastViewed = null;
+pages.course = (params, id) => {
+  const c = byId('courses', id);
+  if (!c) return notFound();
+  const t = teacherOf(c), f = field(c.fieldId), rs = courseReviews(c.id), a = avg(rs), cc = canContact(t);
+  const u = me();
+  const already = u && DB.leads.find(l => l.courseId === c.id && l.studentId === u.id && l.status !== 'declined' && l.status !== 'expired');
+  const own = u && u.id === t.id;
+  if (!own && lastViewed !== c.id) { lastViewed = c.id; fetch(BASE + '/api/course/view', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': CSRF, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }) }).catch(() => {}); }
+  const more = DB.courses.filter(x => x.status === 'active' && x.fieldId === c.fieldId && x.id !== c.id).slice(0, 4);
+  return `<div class="wrap">
+    <div class="course-layout">
+      <div class="stack" style="gap:18px">
+        <div>
+          <div class="row" style="gap:6px"><span class="tag brand">${h(f.name)}</span><span class="tag">${TRACKS[c.track]}</span><span class="tag">${LEVELS[c.level]}</span>${c.highlighted ? '<span class="tag hat">מודגש</span>' : ''}</div>
+          <h1 class="page-title" style="margin-top:10px">${h(c.title)}</h1>
+          <div class="row">${rs.length ? `<span class="stars">${starsTxt(a)}</span> <b>${a.toFixed(1)}</b> <span class="muted">(${rs.length} ביקורות)</span>` : '<span class="muted">עוד אין ביקורות</span>'}</div>
+        </div>
+        ${f.regulated ? `<div class="notice warn">זהו מקצוע שדורש רישיון. הלימוד כאן אינו מקנה רישיון, והוא מיועד להכנה למבחן או לידע מעשי משלים.</div>` : ''}
+        <div class="card"><h2>מה תדע לעשות בסוף</h2><ul class="outcomes" style="margin-top:10px">${c.outcomes.map(o => `<li>${h(o)}</li>`).join('')}</ul></div>
+        <div class="card"><h2>על הקורס</h2><p style="margin:8px 0 0">${h(c.description)}</p></div>
+        <div class="card"><h2>תוכנית הלימוד</h2><p class="muted small" style="margin:0 0 12px">${c.syllabus.length} מפגשים, ${c.duration} דקות כל מפגש</p>
+          <ol class="syllabus">${c.syllabus.map(s => `<li><span><b>${h(s.title)}</b>${s.desc ? `<span class="muted small">${h(s.desc)}</span>` : ''}</span></li>`).join('')}</ol></div>
+        <div class="card"><h2>פרטים מעשיים</h2>
+          <dl class="facts" style="margin:12px 0 0">
+            <div><dt>מפגשים</dt><dd>${c.sessions}</dd></div><div><dt>אורך מפגש</dt><dd>${c.duration} דק׳</dd></div>
+            <div><dt>אופן לימוד</dt><dd>${c.modes.map(m => MODES[m]).join(', ')}</dd></div>
+            <div><dt>אזור</dt><dd>${c.modes.includes('front') ? h((t.teacher.areas || [t.city]).join(', ')) : 'מכל מקום'}</dd></div>
+            <div><dt>זמינות</dt><dd>${h(t.teacher.availability)}</dd></div>
+            <div><dt>יחיד או קבוצה</dt><dd>${c.group === 'group' ? `קבוצה עד ${c.groupMax}` : 'יחיד'}</dd></div>
+            ${c.bring ? `<div><dt>מה להביא</dt><dd>${h(c.bring)}</dd></div>` : ''}
+          </dl></div>
+        <div class="card"><h2>ביקורות</h2>${rs.length ? rs.map(reviewItem).join('') : '<p class="muted">עוד אין ביקורות לקורס הזה.</p>'}</div>
+      </div>
+      <aside class="side-sticky">
+        <div class="card stack">
+          <div class="price" style="font-size:32px">${nis(c.price)} <small>${c.priceType === 'lesson' ? 'לשיעור' : 'לכל הקורס'}</small></div>
+          ${c.trial.on ? `<div class="tag ok" style="justify-self:start">שיעור היכרות ${c.trial.price ? nis(c.trial.price) : 'חינם'}</div>` : ''}
+          <div class="muted small">משלמים ישירות למורה. הפנייה דרך האתר חינם.</div>
+          ${own ? `<a class="btn" href="#/course/${c.id}/edit">עריכת הקורס</a>` :
+            already ? `<div class="notice info" style="margin:0">כבר שלחת פנייה לקורס הזה (${LEAD_STATUS[already.status]}).</div><a class="btn" href="#/me">לפניות שלי</a>` :
+            `<button class="btn primary block" id="contact" ${cc.ok ? '' : 'disabled'}>שליחת פנייה למורה</button>${cc.ok ? '' : `<div class="notice warn small" style="margin:0">${h(cc.why)}</div>`}`}
+        </div>
+        <a class="card row" href="#/teacher/${t.id}" style="text-decoration:none;color:inherit;align-items:center">${avatar(t)}<span><b>${h(t.name)}</b>${t.teacher.verified ? ' <span class="tag ok">מאומת</span>' : ''}<br><span class="small muted">${t.teacher.years} שנות ניסיון · ${h(t.teacher.workplace || '')}</span></span></a>
+      </aside>
+    </div>
+    ${more.length ? `<section class="sec"><h2>עוד קורסים ב${h(f.name)}</h2><div class="courses">${more.map(courseCard).join('')}</div></section>` : ''}
+  </div>`;
+};
+pages.course.after = (params, id) => {
+  const b = $('#contact');
+  if (b) b.onclick = () => { if (!requireLogin('#/course/' + id)) return; openContactForm(byId('courses', id)); };
+};
+function openContactForm(c) {
+  const u = me();
+  modal(`<h2>פנייה ל${h(teacherOf(c).name)}</h2><p class="muted small">${h(c.title)}</p>
+    <form id="lead-form" class="stack">
+      <label class="f"><span>מה אני רוצה ללמוד <i>*</i></span><textarea name="want" maxlength="300" required placeholder="כמה מילים על מה שחשוב לך ללמוד"></textarea></label>
+      <div class="g2">
+        <label class="f"><span>הרמה שלי היום <i>*</i></span><select name="level" required>${opts(SLEVEL, '')}</select></label>
+        <label class="f"><span>אופן לימוד <i>*</i></span><select name="mode" required>${opts(Object.fromEntries(c.modes.map(m => [m, MODES[m]])), c.modes[0])}</select></label>
+        <label class="f"><span>מתי להתחיל <i>*</i></span><select name="start" required>${opts(STARTS, 'month')}</select></label>
+        <label class="f"><span>שעות נוחות</span><input type="text" name="hours" placeholder="למשל: ערבים אחרי 19:00"></label>
+      </div>
+      <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">איך לחזור אליי <i style="color:var(--danger);font-style:normal">*</i></span><div class="checks">
+        <label><input type="checkbox" name="contact" value="phone" checked> טלפון</label><label><input type="checkbox" name="contact" value="whatsapp"> וואטסאפ</label><label><input type="checkbox" name="contact" value="site"> הודעה באתר</label></div></div>
+      <p class="muted small" style="margin:0">שם, טלפון ומייל נלקחים מהחשבון שלך (${h(u.name)}, ${h(u.phone)}). המורה יראה אותם רק אם יפתח את הפנייה.</p>
+      <div class="acts"><button class="btn primary">שליחת הפנייה</button><button class="btn" type="button" data-close>ביטול</button></div>
+    </form>`);
+  $('#lead-form').onsubmit = async e => {
+    e.preventDefault();
+    const d = formData(e.target), contact = checked(e.target, 'contact');
+    if (!contact.length) return toast('בחר לפחות דרך אחת לחזור אליך');
+    if (!await api('lead/create', { courseId: c.id, want: d.want, level: d.level, mode: d.mode, start: d.start, hours: d.hours, contact })) return;
+    closeModal();
+    modal(`<h2>הפנייה נשלחה</h2><p>המורה יחזור אליך בדרך כלל תוך יום–יומיים. אם לא יחזור תוך ${DB.settings.leadExpiryHours} שעות, הפנייה תיסגר ותוכל לפנות למורה אחר בתחום.</p><div class="acts"><a class="btn primary" href="#/me" data-close>לפניות שלי</a><button class="btn" data-close>סגירה</button></div>`);
+    route();
+  };
+}
+const leadPriceFor = c => (c && c.leadPrice) || field(c.fieldId).leadPrice;
+
+function reviewItem(r) {
+  const s = byId('users', r.studentId) || { name: 'תלמיד' };
+  return `<div class="review"><div class="row"><b>${h(short(s.name))}</b><span class="stars">${starsTxt(r.stars)}</span><span class="muted small">${fmtDate(r.at)}</span>
+    ${r.delivered === 'yes' ? '<span class="tag ok">למד את מה שהובטח</span>' : r.delivered === 'partly' ? '<span class="tag">למד חלקית</span>' : ''}</div>
+    ${r.text ? `<p style="margin:6px 0 0">${h(r.text)}</p>` : ''}${r.reply ? `<div class="reply"><b>תגובת המורה:</b> ${h(r.reply)}</div>` : ''}</div>`;
+}
+
+/* ---------- teacher profile ---------- */
+pages.teacher = (params, id) => {
+  const t = byId('users', id);
+  if (!t || !isTeacher(t)) return notFound();
+  const cs = DB.courses.filter(c => c.teacherId === t.id && c.status === 'active'), rs = teacherReviews(t.id);
+  return `<div class="wrap">
+    <div class="card row" style="margin-top:24px;gap:18px;align-items:center">${avatar(t, 'lg')}
+      <div style="flex:1;min-width:220px"><h1 style="font-size:30px">${h(t.name)}</h1>
+        <div class="row" style="gap:6px;margin-top:6px">${t.teacher.verified ? '<span class="tag ok">מאומת</span>' : ''}${t.teacher.workplace ? '<span class="tag brand">עובד כיום במקצוע</span>' : ''}${rs.length >= 3 && avg(rs) >= 4.5 ? '<span class="tag hat">מורה מוביל</span>' : ''}</div>
+        <div class="muted" style="margin-top:6px">${h(t.city)} · ${t.teacher.fields.map(f => h(field(f).name)).join(', ')}</div></div>
+      <div style="text-align:center">${rs.length ? `<div class="stars" style="font-size:22px">${starsTxt(avg(rs))}</div><b>${avg(rs).toFixed(1)}</b> <span class="muted small">(${rs.length})</span>` : '<span class="muted">עוד אין ביקורות</span>'}</div>
+    </div>
+    <div class="course-layout">
+      <div class="stack" style="gap:18px">
+        <div class="card"><h2>על המורה</h2><p style="margin:8px 0">${h(t.teacher.about)}</p>
+          <dl class="facts"><div><dt>ניסיון</dt><dd>${t.teacher.years} שנים</dd></div>${t.teacher.workplace ? `<div><dt>עובד היום</dt><dd>${h(t.teacher.workplace)}</dd></div>` : ''}<div><dt>זמינות</dt><dd>${h(t.teacher.availability)}</dd></div><div><dt>אופני לימוד</dt><dd>${t.teacher.modes.map(m => MODES[m]).join(', ')}</dd></div></dl></div>
+        <section><h2 style="font-size:22px;margin-bottom:12px">הקורסים של ${h(t.name.split(' ')[0])}</h2><div class="courses">${cs.map(courseCard).join('') || '<div class="empty">אין קורסים פעילים</div>'}</div></section>
+        <div class="card"><h2>ביקורות</h2>${rs.length ? rs.map(reviewItem).join('') : '<p class="muted">עוד אין ביקורות.</p>'}</div>
+      </div>
+      <aside class="side-sticky"><div class="card stack">
+        <b>הסמכות</b>${t.teacher.credentials.filter(x => !x.pending).length ? t.teacher.credentials.filter(x => !x.pending).map(x => `<div>✓ ${h(x.name)}</div>`).join('') : '<span class="muted small">לא הוצגו תעודות</span>'}
+        <hr style="border:0;border-top:1px solid var(--line);width:100%"><span class="muted small">חבר מאז ${fmtDate(t.teacher.joined)}</span>
+      </div></aside>
+    </div></div>`;
+};
+
+/* ---------- auth ---------- */
+pages.login = params => {
+  const next = params.get('next') || '#/';
+  return `<div class="wrap" style="max-width:460px"><div class="card stack" style="margin-top:40px">
+    <h1 style="font-size:30px">התחברות</h1>
+    <form id="login" class="stack">
+      <label class="f"><span>מייל</span><input type="email" name="email" required dir="ltr" autocomplete="email"></label>
+      <label class="f"><span>סיסמה</span><input type="password" name="password" required autocomplete="current-password"></label>
+      <button class="btn primary">התחברות</button>
+    </form>
+    <p class="muted small" style="text-align:center;margin:0"><a href="#/forgot">שכחתי סיסמה</a> · <a href="#/register?next=${encodeURIComponent(next)}">הרשמה</a></p>
+  </div></div>`;
+};
+pages.login.after = params => {
+  const next = params.get('next') || '#/';
+  $('#login').onsubmit = async e => {
+    e.preventDefault();
+    const d = formData(e.target);
+    if (!await api('auth/login', { email: d.email, password: e.target.password.value })) return;
+    toast('התחברת בהצלחה'); go(next);
+  };
+};
+pages.register = params => {
+  const next = params.get('next') || '#/';
+  return `<div class="wrap" style="max-width:520px"><div class="card stack" style="margin-top:40px">
+    <h1 style="font-size:30px">הרשמה</h1><p class="muted" style="margin:0">חשבון אחד מאפשר ללמוד, ובהמשך גם ללמד.</p>
+    <form id="register" class="stack">
+      <label class="f"><span>שם מלא <i>*</i></span><input type="text" name="name" required></label>
+      <label class="f"><span>מגדר <i>*</i></span><select name="gender" required><option value="">בחר</option><option value="m" ${DB.session.guestGender === 'm' ? 'selected' : ''}>זכר</option><option value="f" ${DB.session.guestGender === 'f' ? 'selected' : ''}>נקבה</option></select></label>
+      <div class="g2"><label class="f"><span>מייל <i>*</i></span><input type="email" name="email" required dir="ltr"></label>
+        <label class="f"><span>טלפון נייד <i>*</i></span><input type="tel" name="phone" required pattern="05[0-9]{8}" placeholder="05XXXXXXXX" dir="ltr"></label></div>
+      <label class="f"><span>עיר <i>*</i></span><select name="city" required>${cityOpts('', 'בחר עיר')}</select></label>
+      <label class="f"><span>סיסמה <i>*</i></span><input type="password" name="password" minlength="8" required></label>
+      <label class="row small"><input type="checkbox" name="terms" required> קראתי ואני מסכים ל<a href="#/terms" target="_blank">תקנון ולמדיניות הפרטיות</a></label>
+      <label class="row small"><input type="checkbox" name="news" value="1"> עדכונים במייל על קורסים חדשים בתחומים שבחרתי</label>
+      <button class="btn primary">פתיחת חשבון</button>
+    </form></div></div>`;
+};
+pages.register.after = params => {
+  const next = params.get('next') || '#/';
+  $('#register').onsubmit = async e => {
+    e.preventDefault();
+    const d = formData(e.target);
+    if (!await api('auth/register', { name: d.name, gender: d.gender, email: d.email, phone: d.phone, city: d.city, password: e.target.password.value, terms: !!d.terms, news: !!d.news })) return;
+    toast('החשבון נפתח'); go(next);
+  };
+};
+pages.forgot = () => `<div class="wrap" style="max-width:460px"><div class="card stack" style="margin-top:40px"><h1 style="font-size:28px">שחזור סיסמה</h1>
+  <form class="stack" id="forgot"><label class="f"><span>מייל</span><input type="email" name="email" required dir="ltr"></label><button class="btn primary">שליחת קישור</button></form>
+  <a href="#/login" class="small">חזרה להתחברות</a></div></div>`;
+pages.forgot.after = () => {
+  $('#forgot').onsubmit = async e => {
+    e.preventDefault();
+    if (!await api('auth/forgot', { email: e.target.email.value })) return;
+    modal(`<h2>נשלח קישור</h2><p>אם המייל רשום אצלנו, נשלח אליו קישור לבחירת סיסמה חדשה. הקישור בתוקף לשעתיים.</p><div class="acts"><button class="btn primary" data-close>סגירה</button></div>`);
+  };
+};
+pages.reset = params => `<div class="wrap" style="max-width:460px"><div class="card stack" style="margin-top:40px"><h1 style="font-size:28px">סיסמה חדשה</h1>
+  <form class="stack" id="reset"><label class="f"><span>סיסמה חדשה (8 תווים לפחות)</span><input type="password" name="password" minlength="8" required autocomplete="new-password"></label><button class="btn primary">שמירה והתחברות</button></form></div></div>`;
+pages.reset.after = params => {
+  $('#reset').onsubmit = async e => {
+    e.preventDefault();
+    if (!await api('auth/reset', { token: params.get('token'), password: e.target.password.value })) return;
+    toast('הסיסמה עודכנה'); go('#/');
+  };
+};
+
+/* ---------- request board ---------- */
+function requestItem(r) {
+  const s = byId('users', r.studentId) || {}, u = me(), f = field(r.fieldId);
+  const mine = u && u.id === r.studentId, opened = !!r.openedByMe, full = r.opensCount >= DB.settings.maxOpensPerRequest;
+  const lead = opened && DB.leads.find(l => l.requestId === r.id && l.teacherId === u.id);
+  let action = '';
+  if (isTeacher(u) && !mine) {
+    const cc = canContact(s);
+    if (opened) action = `<a class="btn sm" href="#/leads?id=${lead ? lead.id : ''}">פתחת · לפרטים</a>`;
+    else if (!u.teacher.fields.includes(r.fieldId)) action = `<span class="muted small">לא בתחומים שלך</span>`;
+    else if (!cc.ok) action = `<span class="muted small">גבר לגבר, אישה לאישה</span>`;
+    else action = `<button class="btn sm primary" data-open-req="${r.id}" ${full ? 'disabled' : ''}>${full ? `כבר נפתח ${r.opensCount} פעמים` : `פתיחה ב-${nis(f.leadPrice)}`}</button>`;
+  }
+  return `<div class="item"><div class="grow">
+      <div class="row" style="gap:6px"><span class="tag brand">${h(f.name)}</span><span class="tag">${SLEVEL[r.level]}</span>${r.modes.map(m => `<span class="tag">${MODES[m]}</span>`).join('')}${r.area ? `<span class="tag">${h(r.area)}</span>` : ''}</div>
+      <div class="t" style="margin-top:6px">${h(r.text)}</div>
+      <div class="muted small">${s.gender === 'f' ? 'תלמידה' : 'תלמיד'} · ${ago(r.createdAt)}${r.budget ? ` · תקציב עד ${nis(r.budget)} לשיעור` : ''} · להתחיל ${STARTS[r.start]} · נפתח על ידי ${r.opensCount} מתוך ${DB.settings.maxOpensPerRequest}</div>
+    </div>${action}</div>`;
+}
+pages.requests = params => {
+  const u = me(), fsel = params.get('field') || '';
+  let list = DB.requests.filter(r => r.status === 'open' && (!fsel || r.fieldId === fsel));
+  if (isTeacher(u) && !fsel) list.sort((a, b) => (u.teacher.fields.includes(b.fieldId) ? 1 : 0) - (u.teacher.fields.includes(a.fieldId) ? 1 : 0) || b.createdAt.localeCompare(a.createdAt));
+  else list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return `<div class="wrap">
+    <h1 class="page-title">לוח בקשות</h1>
+    <p class="lead">תלמידים שמחפשים מורה. כל בקשה נפתחת לעד ${DB.settings.maxOpensPerRequest} מורים.</p>
+    <div class="row" style="justify-content:space-between;margin-bottom:14px">
+      <select id="req-field" style="width:auto">${fieldOpts(fsel, 'כל התחומים')}</select>
+      <a class="btn primary" href="#/requests/new">פרסום בקשה: מחפש מורה</a>
+    </div>
+    <div class="list">${list.map(requestItem).join('') || '<div class="empty">אין בקשות פתוחות בתחום הזה.</div>'}</div></div>`;
+};
+pages.requests.after = () => {
+  $('#req-field').onchange = e => go('#/requests' + (e.target.value ? '?field=' + e.target.value : ''));
+  $$('[data-open-req]').forEach(b => b.onclick = () => openRequest(byId('requests', b.dataset.openReq)));
+};
+function openRequest(r) {
+  const u = me(), price = field(r.fieldId).leadPrice;
+  if (u.wallet < price) return modal(`<h2>אין מספיק יתרה</h2><p>פתיחת הבקשה עולה ${nis(price)} והיתרה שלך ${nis(u.wallet)}.</p><div class="acts"><a class="btn primary" href="#/credits" data-close>טעינת יתרה</a><button class="btn" data-close>סגירה</button></div>`);
+  modal(`<h2>פתיחת הבקשה</h2><p>ייגבו ${nis(price)} מהיתרה (${nis(u.wallet)}). אחרי הפתיחה יוצגו פרטי הקשר של התלמיד.</p><div class="acts"><button class="btn primary" id="yes">פתיחה</button><button class="btn" data-close>ביטול</button></div>`);
+  $('#yes').onclick = async () => {
+    const j = await api('request/open', { id: r.id });
+    closeModal();
+    if (!j) return route();
+    toast('הבקשה נפתחה'); go('#/leads?id=' + j.leadId);
+  };
+}
+pages.newRequest = params => {
+  if (!me()) return gate('#/requests/new');
+  return `<div class="wrap" style="max-width:640px"><h1 class="page-title">פרסום בקשה</h1><p class="lead">מורים מהתחום יראו את הבקשה, ועד ${DB.settings.maxOpensPerRequest} מהם יוכלו לפנות אליך.</p>
+    <form class="card stack" id="req-form">
+      <label class="f"><span>תחום <i>*</i></span><select name="fieldId" required>${fieldOpts(params.get('field') || '', 'בחר תחום')}</select></label>
+      <label class="f"><span>מה בדיוק אני צריך <i>*</i></span><textarea name="text" maxlength="500" required placeholder="למשל: רוצה ללמוד לתקן מזגנים, יש לי רקע בחשמל"></textarea></label>
+      <div class="g2"><label class="f"><span>רמה <i>*</i></span><select name="level" required>${opts(SLEVEL, 'none')}</select></label>
+        <label class="f"><span>מתי להתחיל <i>*</i></span><select name="start">${opts(STARTS, 'month')}</select></label>
+        <label class="f"><span>אזור (לפרונטלי)</span><select name="area">${cityOpts(me().city, 'לא משנה')}</select></label>
+        <label class="f"><span>תקציב לשיעור (₪)</span><input type="number" name="budget" min="0"></label></div>
+      <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">אופן לימוד <i style="color:var(--danger);font-style:normal">*</i></span>${modeChecks('modes', ['front'])}</div>
+      <p class="muted small" style="margin:0">הבקשה נסגרת לבד אחרי 30 יום, או כשתסמן "מצאתי מורה".</p>
+      <div><button class="btn primary">פרסום הבקשה</button></div>
+    </form></div>`;
+};
+pages.newRequest.after = () => {
+  const f = $('#req-form'); if (!f) return;
+  f.onsubmit = async e => {
+    e.preventDefault(); const d = formData(f), modes = checked(f, 'modes');
+    if (!modes.length) return toast('בחר אופן לימוד');
+    if (!await api('request/create', { fieldId: d.fieldId, text: d.text, level: d.level, modes, area: d.area, budget: +d.budget || 0, start: d.start })) return;
+    toast('הבקשה פורסמה'); go('#/me?tab=requests');
+  };
+};
+function gate(next) { return `<div class="wrap" style="max-width:520px"><div class="empty" style="margin-top:40px"><b>צריך להתחבר כדי להמשיך.</b><br><br><a class="btn primary" href="#/login?next=${encodeURIComponent(next)}">התחברות</a> <a class="btn" href="#/register?next=${encodeURIComponent(next)}">הרשמה</a></div></div>`; }
+
+/* ---------- student area ---------- */
+pages.me = params => {
+  const u = me(); if (!u) return gate('#/me');
+  const tab = params.get('tab') || 'leads';
+  const tabs = { leads: 'הפניות שלי', requests: 'הבקשות שלי', lessons: 'השיעורים שלי', profile: 'פרטים אישיים' };
+  let body = '';
+  if (tab === 'leads') {
+    const ls = DB.leads.filter(l => l.studentId === u.id && l.courseId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    body = ls.map(l => {
+      const c = byId('courses', l.courseId) || { id: l.courseId, title: 'קורס שהוסר', fieldId: '' }, t = byId('users', l.teacherId) || { name: '' }, st = l.status === 'open' ? (l.progress ? PROGRESS[l.progress] : 'המורה יצר קשר') : l.status === 'new' ? 'ממתינה' : 'לא נענתה';
+      const reviewed = DB.reviews.some(r => r.courseId === l.courseId && r.studentId === u.id);
+      const canReview = l.status === 'open' && !reviewed && (Date.now() - new Date(l.openedAt) > 7 * 864e5 || DB.lessons.some(v => v.leadId === l.id && new Date(v.at) < new Date()));
+      return `<div class="item"><div class="grow"><div class="t"><a href="#/course/${c.id}">${h(c.title)}</a></div><div class="muted small">${h(t.name)} · נשלחה ${ago(l.createdAt)}</div></div>
+        <span class="tag ${l.status === 'open' ? 'ok' : l.status === 'new' ? 'hat' : 'danger'}">${st}</span>
+        ${l.status === 'open' ? `<a class="btn sm" href="#/messages/${l.id}">הודעות</a>` : ''}
+        ${canReview ? `<a class="btn sm primary" href="#/review/${l.id}">כתיבת ביקורת</a>` : reviewed ? '<span class="muted small">כתבת ביקורת</span>' : ''}
+        ${l.status === 'new' ? `<button class="btn sm danger" data-cancel-lead="${l.id}">ביטול</button>` : ''}
+        ${l.status === 'declined' || l.status === 'expired' ? `<a class="btn sm" href="#/search?field=${c.fieldId}">מורה אחר</a>` : ''}</div>`;
+    }).join('') || '<div class="empty">עוד לא שלחת פניות. <a href="#/search">לחיפוש קורסים</a></div>';
+  } else if (tab === 'requests') {
+    const rs = DB.requests.filter(r => r.studentId === u.id);
+    body = rs.map(r => `<div class="item"><div class="grow"><div class="t">${h(r.text)}</div><div class="muted small">${h(field(r.fieldId).name)} · ${ago(r.createdAt)} · ${r.opensCount} מורים פתחו</div></div>
+      <span class="tag ${r.status === 'open' ? 'ok' : ''}">${r.status === 'open' ? 'פתוחה' : 'סגורה'}</span>
+      ${r.status === 'open' ? `<button class="btn sm" data-close-req="${r.id}">מצאתי מורה</button>` : ''}</div>`).join('') + `<a class="btn primary" href="#/requests/new" style="justify-self:start">פרסום בקשה חדשה</a>`;
+  } else if (tab === 'lessons') {
+    const vs = DB.lessons.filter(v => { const l = byId('leads', v.leadId); return l && l.studentId === u.id; }).sort((a, b) => a.at.localeCompare(b.at));
+    body = vs.map(lessonItem).join('') || '<div class="empty">אין שיעורים בווידאו. המורה קובע אותם מתוך ההודעות.</div>';
+  } else {
+    body = `<form class="card stack" id="profile"><div class="g2">
+      <label class="f"><span>שם</span><input type="text" name="name" value="${h(u.name)}"></label>
+      <label class="f"><span>טלפון</span><input type="tel" name="phone" value="${h(u.phone)}" dir="ltr"></label>
+      <label class="f"><span>מייל</span><input type="email" name="email" value="${h(u.email)}" dir="ltr"></label>
+      <label class="f"><span>עיר</span><select name="city">${cityOpts(u.city)}</select></label></div>
+      <label class="f"><span>מגדר</span><input type="text" value="${u.gender === 'f' ? 'נקבה' : 'זכר'}" disabled><span class="muted small" style="font-weight:400">שינוי מגדר רק דרך פנייה למנהל</span></label>
+      <label class="row small"><input type="checkbox" name="news" value="1" ${u.news ? 'checked' : ''}> עדכונים במייל</label>
+      <div class="row"><button class="btn primary">שמירה</button></div></form>
+      <form class="card stack" id="pw"><b>שינוי סיסמה</b><div class="g2">
+      <label class="f"><span>סיסמה נוכחית</span><input type="password" name="old" required autocomplete="current-password"></label>
+      <label class="f"><span>סיסמה חדשה (8 תווים לפחות)</span><input type="password" name="new" minlength="8" required autocomplete="new-password"></label></div>
+      <div><button class="btn">עדכון סיסמה</button></div></form>`;
+  }
+  return `<div class="wrap"><h1 class="page-title">האזור האישי</h1>
+    <nav class="tabs">${Object.entries(tabs).map(([k, v]) => `<a href="#/me?tab=${k}" class="${k === tab ? 'on' : ''}">${v}</a>`).join('')}</nav>
+    <div class="list">${body}</div></div>`;
+};
+pages.me.after = () => {
+  $$('[data-cancel-lead]').forEach(b => b.onclick = async () => { if (await api('lead/cancel', { id: b.dataset.cancelLead })) { toast('הפנייה בוטלה'); route(); } });
+  $$('[data-close-req]').forEach(b => b.onclick = async () => { if (await api('request/close', { id: b.dataset.closeReq })) { toast('הבקשה נסגרה. בהצלחה!'); route(); } });
+  const pf = $('#profile'); if (pf) pf.onsubmit = async e => { e.preventDefault(); const d = formData(pf); if (await api('profile/update', { name: d.name, phone: d.phone, email: d.email, city: d.city, news: !!d.news })) { toast('נשמר'); route(); } };
+  const pw = $('#pw'); if (pw) pw.onsubmit = async e => { e.preventDefault(); if (await api('profile/password', { old: pw.old.value, new: pw.new.value })) { toast('הסיסמה עודכנה'); pw.reset(); } };
+};
+function lessonItem(v) {
+  const l = byId('leads', v.leadId), u = me(), other = byId('users', u.id === l.teacherId ? l.studentId : l.teacherId) || { name: '' };
+  const open = Date.now() > new Date(v.at) - 10 * 6e4 && Date.now() < new Date(v.at).getTime() + v.duration * 6e4;
+  return `<div class="item"><div class="grow"><div class="t">${fmtDT(v.at)} · ${v.duration} דק׳</div><div class="muted small">עם ${h(other.name)}${v.topic ? ' · ' + h(v.topic) : ''}</div></div>
+    ${open ? `<a class="btn sm primary" href="#/room/${v.id}">כניסה לשיעור</a>` : `<a class="btn sm" href="#/room/${v.id}">חדר השיעור</a><span class="muted small">נפתח 10 דק׳ לפני</span>`}</div>`;
+}
+
+/* ---------- join as teacher ---------- */
+let joinFile = null;
+pages.join = params => {
+  const u = me();
+  if (!u) return `<div class="wrap" style="max-width:640px"><h1 class="page-title">הצטרף לצוות שלנו</h1><p class="lead">יש לך מקצוע ושעות פנויות? למד אצלנו, וקבל תלמידים בלי לחפש אותם.</p>
+    <div class="card stack"><b>איך זה עובד</b><ol style="margin:0;padding-right:20px"><li>נרשמים וממלאים פרופיל קצר.</li><li>מפרסמים קורס עם תוכנית לימוד מפורטת.</li><li>תלמידים פונים, ואתם בוחרים אילו פניות לפתוח.</li><li>משלמים רק על פנייה שפתחתם, לפי המחיר של אותו קורס.</li></ol>
+    <div class="row"><a class="btn primary" href="#/register?next=${encodeURIComponent('#/join')}">הרשמה</a><a class="btn" href="#/login?next=${encodeURIComponent('#/join')}">כבר רשום? התחברות</a></div></div></div>`;
+  if (u.teacher && u.teacher.status === 'approved') return `<div class="wrap"><div class="empty" style="margin-top:40px">אתה כבר מורה באתר. <a href="#/dash">ללוח המורה</a></div></div>`;
+  const rejected = u.teacher && u.teacher.status === 'rejected' ? `<div class="notice warn">הבקשה הקודמת לא אושרה${u.teacher.rejectReason ? ': ' + h(u.teacher.rejectReason) : ''}. אפשר לתקן ולשלוח שוב.</div>` : '';
+  if (u.teacher && u.teacher.status === 'pending') return `<div class="wrap" style="max-width:640px"><div class="card stack" style="margin-top:30px"><h1 style="font-size:28px">הבקשה שלך נבדקת</h1><p>נבדוק את הפרטים ונעדכן אותך במייל תוך יום עסקים. בינתיים אפשר לכתוב קורס כטיוטה.</p><a class="btn primary" href="#/course/new" style="justify-self:start">כתיבת קורס כטיוטה</a></div></div>`;
+  const step = +(params.get('step') || 1), d = JSON.parse(sessionStorage.getItem('join') || '{}');
+  const bar = `<div class="steps">${[1, 2, 3].map(i => `<div class="${i <= step ? 'on' : ''}"></div>`).join('')}</div>`;
+  let body;
+  if (step === 1) body = `<form class="card stack" id="join1"><h2>פרופיל</h2>
+    <label class="f"><span>תחומים שאני מלמד <i>*</i> (עד 5)</span><div class="checks">${DB.fields.map(f => `<label><input type="checkbox" name="fields" value="${f.id}" ${(d.fields || []).includes(f.id) ? 'checked' : ''}> ${h(f.name)}</label>`).join('')}</div></label>
+    <label class="f"><span>תחום שלא ברשימה</span><input type="text" name="otherField" value="${h(d.otherField || '')}" placeholder="יישלח לאישור המנהל"></label>
+    <div class="g2"><label class="f"><span>שנות ניסיון <i>*</i></span><input type="number" name="years" min="0" required value="${h(d.years || '')}"></label>
+      <label class="f"><span>איפה אני עובד היום</span><input type="text" name="workplace" value="${h(d.workplace || '')}"></label></div>
+    <label class="f"><span>עליי <i>*</i></span><textarea name="about" maxlength="800" required>${h(d.about || '')}</textarea></label>
+    <label class="f"><span>זמינות <i>*</i></span><input type="text" name="availability" required value="${h(d.availability || '')}" placeholder="למשל: א׳–ה׳ אחרי 16:00"></label>
+    <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">אופני לימוד <i style="color:var(--danger);font-style:normal">*</i></span>${modeChecks('modes', d.modes || ['front'])}</div>
+    <label class="f"><span>אזורי הגעה (לפרונטלי)</span><select name="areas" multiple size="4">${CITIES.map(c => `<option ${(d.areas || [u.city]).includes(c) ? 'selected' : ''}>${h(c)}</option>`).join('')}</select></label>
+    <div><button class="btn primary">המשך</button></div></form>`;
+  else if (step === 2) body = `<form class="card stack" id="join2"><h2>אימות (לא חובה)</h2><p class="muted" style="margin:0">תעודה מאושרת נותנת תג "מאומת", ותלמידים בוחרים מורים מאומתים יותר. הקובץ נשמר בפרטיות ורק המנהל רואה אותו.</p>
+    <label class="f"><span>תעודה או רישיון (תמונה או PDF, עד 10MB)</span><input type="file" name="file" accept="image/*,.pdf"></label>${joinFile ? `<span class="muted small">נבחר: ${h(joinFile.name)}</span>` : ''}
+    <label class="f"><span>שם התעודה</span><input type="text" name="credName" value="${h(d.credName || '')}" placeholder="למשל: רישיון חשמלאי מוסמך"></label>
+    <label class="f"><span>מספר רישיון (למקצוע מוסדר, לא מוצג לציבור)</span><input type="text" name="license" value="${h(d.license || '')}"></label>
+    <div class="row"><a class="btn" href="#/join?step=1">חזרה</a><button class="btn primary">המשך</button></div></form>`;
+  else body = `<div class="card stack"><h2>שליחה לאישור</h2>
+    <dl class="facts"><div><dt>תחומים</dt><dd>${(d.fields || []).map(f => h(field(f).name)).join(', ') || '—'}</dd></div><div><dt>ניסיון</dt><dd>${h(d.years)} שנים</dd></div><div><dt>זמינות</dt><dd>${h(d.availability)}</dd></div><div><dt>תעודה</dt><dd>${h(d.credName || 'ללא')}</dd></div></dl>
+    <div class="notice info" style="margin:0">משלמים רק על פנייה שפותחים, והמחיר נקבע לכל קורס לפי התחום שלו. אין דמי מנוי.</div>
+    <label class="row small"><input type="checkbox" id="tterms"> קראתי ואני מסכים לתקנון המורים</label>
+    <div class="row"><a class="btn" href="#/join?step=2">חזרה</a><button class="btn primary" id="join-send">שליחה לאישור</button></div></div>`;
+  return `<div class="wrap" style="max-width:720px"><h1 class="page-title">הצטרפות כמורה</h1>${rejected}${bar}${body}</div>`;
+};
+pages.join.after = () => {
+  const store = o => { const d = JSON.parse(sessionStorage.getItem('join') || '{}'); Object.assign(d, o); sessionStorage.setItem('join', JSON.stringify(d)); };
+  const j1 = $('#join1');
+  if (j1) j1.onsubmit = e => { e.preventDefault(); const d = formData(j1), fields = checked(j1, 'fields'), modes = checked(j1, 'modes');
+    if (!fields.length && !d.otherField) return toast('בחר לפחות תחום אחד'); if (fields.length > 5) return toast('עד 5 תחומים'); if (!modes.length) return toast('בחר אופן לימוד');
+    store({ ...d, fields, modes, areas: $$('[name=areas] option:checked', j1).map(o => o.value) }); go('#/join?step=2'); };
+  const j2 = $('#join2');
+  if (j2) j2.onsubmit = e => { e.preventDefault(); const d = formData(j2); if (d.file && d.file.name) joinFile = d.file; store({ credName: d.credName, license: d.license }); go('#/join?step=3'); };
+  const s = $('#join-send');
+  if (s) s.onclick = async () => {
+    if (!$('#tterms').checked) return toast('צריך לאשר את תקנון המורים');
+    const d = JSON.parse(sessionStorage.getItem('join') || '{}');
+    if (!await api('teacher/apply', {}, withFile(d, joinFile))) return;
+    joinFile = null; sessionStorage.removeItem('join'); toast('נשלח לאישור'); go('#/join');
+  };
+};
+
+/* ---------- teacher dashboard ---------- */
+function teacherShell(active, inner) {
+  const u = me();
+  const newLeads = DB.leads.filter(l => l.teacherId === u.id && l.status === 'new').length;
+  const items = [['#/dash', 'לוח בקרה', ''], ['#/leads', 'לידים', newLeads || ''], ['#/requests', 'לוח בקשות', ''], ['#/courses', 'הקורסים שלי', ''], ['#/lessons', 'יומן שיעורים', ''], ['#/messages', 'הודעות', ''], ['#/credits', 'יתרה ותשלומים', ''], ['#/profile', 'פרופיל מורה', '']];
+  return `<div class="wrap"><div class="panel-layout"><nav class="sidemenu">${items.map(([href, label, n]) => `<a href="${href}" class="${href === active ? 'on' : ''}">${label}${n ? `<span class="pill-count">${n}</span>` : ''}</a>`).join('')}</nav><div>${inner}</div></div></div>`;
+}
+function needTeacher(next) { const u = me(); if (!u) return gate(next); if (!isTeacher(u)) return `<div class="wrap"><div class="empty" style="margin-top:40px">העמוד הזה למורים בלבד. <a href="#/join">הצטרפות כמורה</a></div></div>`; return null; }
+pages.dash = () => {
+  const g = needTeacher('#/dash'); if (g) return g;
+  const u = me();
+  const leads = DB.leads.filter(l => l.teacherId === u.id), newL = leads.filter(l => l.status === 'new');
+  const week = DB.lessons.filter(v => { const l = byId('leads', v.leadId); return l && l.teacherId === u.id && new Date(v.at) > new Date() && new Date(v.at) < Date.now() + 7 * 864e5; });
+  const rs = teacherReviews(u.id), cs = DB.courses.filter(c => c.teacherId === u.id);
+  const reqs = DB.requests.filter(r => r.status === 'open' && u.teacher.fields.includes(r.fieldId) && !r.openedByMe && r.studentId !== u.id).slice(0, 3);
+  const monthLeads = c => leads.filter(l => l.courseId === c.id && Date.now() - new Date(l.createdAt) < 30 * 864e5).length;
+  return teacherShell('#/dash', `
+    <h1 class="page-title" style="margin-top:0">שלום, ${h(u.name.split(' ')[0])}</h1>
+    <div class="stats">
+      <a class="stat" href="#/leads" style="text-decoration:none;color:inherit"><b>${newL.length}</b><span>לידים חדשים</span></a>
+      <a class="stat" href="#/credits" style="text-decoration:none;color:inherit"><b>${nis(u.wallet)}</b><span>יתרה · טעינה</span></a>
+      <div class="stat"><b>${week.length}</b><span>שיעורים השבוע</span></div>
+      <div class="stat"><b>${rs.length ? avg(rs).toFixed(1) : '—'}</b><span>דירוג ממוצע</span></div>
+    </div>
+    <section class="sec"><h2 style="font-size:22px">לידים חדשים</h2><div class="list">${newL.slice(0, 5).map(leadCard).join('') || '<div class="empty">אין לידים חדשים כרגע.</div>'}</div>${newL.length > 5 ? '<a href="#/leads">לכל הלידים</a>' : ''}</section>
+    <section class="sec"><h2 style="font-size:22px">בקשות בלוח שמתאימות לך</h2><div class="list">${reqs.map(requestItem).join('') || '<div class="empty">אין בקשות חדשות בתחומים שלך.</div>'}</div></section>
+    <section class="sec"><h2 style="font-size:22px">שיעורים קרובים</h2><div class="list">${week.map(lessonItem).join('') || '<div class="empty">אין שיעורים בשבוע הקרוב.</div>'}</div></section>
+    <section class="sec"><div class="row" style="justify-content:space-between"><h2 style="font-size:22px">הקורסים שלי</h2><a class="btn primary sm" href="#/course/new">קורס חדש</a></div>
+      <div class="scroll-x" style="margin-top:10px"><table class="t"><tr><th>קורס</th><th>מצב</th><th>צפיות</th><th>פניות החודש</th><th>מחיר ליד</th><th></th></tr>
+      ${cs.map(c => `<tr><td><a href="#/course/${c.id}">${h(c.title)}</a></td><td>${statusTag(c.status)}${c.highlighted ? ' <span class="tag hat">מודגש</span>' : ''}</td><td>${c.views || 0}</td><td>${monthLeads(c)}</td><td>${nis(leadPriceFor(c))}</td>
+        <td class="row" style="gap:6px"><a class="btn sm" href="#/course/${c.id}/edit">עריכה</a>${c.status === 'active' ? `<button class="btn sm hat" data-hl="${c.id}">${c.highlighted ? 'הארכת הדגשה' : 'הדגשה'} ${nis(DB.settings.highlightPrice)}</button>` : ''}</td></tr>`).join('')}</table></div></section>
+    <section class="sec"><h2 style="font-size:22px">ביקורות אחרונות</h2><div class="card">${rs.slice(0, 3).map(r => reviewItem(r) + (r.reply ? '' : `<button class="btn sm" data-reply="${r.id}">תגובה</button>`)).join('') || '<p class="muted">עוד אין ביקורות.</p>'}</div></section>`);
+};
+pages.dash.after = () => {
+  bindLeadButtons(); $$('[data-open-req]').forEach(b => b.onclick = () => openRequest(byId('requests', b.dataset.openReq)));
+  $$('[data-hl]').forEach(b => b.onclick = () => {
+    const c = byId('courses', b.dataset.hl), u = me(), price = DB.settings.highlightPrice;
+    if (u.wallet < price) return modal(`<h2>אין מספיק יתרה</h2><p>הדגשה עולה ${nis(price)} והיתרה שלך ${nis(u.wallet)}.</p><div class="acts"><a class="btn primary" href="#/credits?back=%23%2Fdash" data-close>טעינת יתרה</a><button class="btn" data-close>סגירה</button></div>`);
+    modal(`<h2>הדגשת קורס</h2><p>"${h(c.title)}" יוצג בראש החיפוש ובדף הבית למשך ${DB.settings.highlightDays} יום. ייגבו ${nis(price)} מהיתרה (${nis(u.wallet)}).</p><div class="acts"><button class="btn primary" id="hl-yes">הדגשה</button><button class="btn" data-close>ביטול</button></div>`);
+    $('#hl-yes').onclick = async () => { const j = await api('course/highlight', { id: c.id }); closeModal(); if (j) toast('הקורס מודגש'); route(); };
+  });
+  $$('[data-reply]').forEach(b => b.onclick = () => {
+    modal(`<h2>תגובה לביקורת</h2><p class="muted small">אפשר להגיב פעם אחת. התגובה מוצגת מתחת לביקורת.</p><textarea id="rep" maxlength="400"></textarea><div class="acts"><button class="btn primary" id="rep-ok">פרסום</button><button class="btn" data-close>ביטול</button></div>`);
+    $('#rep-ok').onclick = async () => { const v = $('#rep').value.trim(); if (!v) return; if (await api('review/reply', { id: b.dataset.reply, text: v })) { closeModal(); route(); } };
+  });
+};
+const statusTag = s => ({ active: '<span class="tag ok">פעיל</span>', pending: '<span class="tag hat">ממתין לאישור</span>', draft: '<span class="tag">טיוטה</span>', hidden: '<span class="tag">מוסתר</span>', rejected: '<span class="tag danger">הוחזר לתיקון</span>' }[s] || '');
+
+/* ---------- leads ---------- */
+function leadCard(l) {
+  const s = byId('users', l.studentId) || { name: '', city: '' }, c = l.courseId ? byId('courses', l.courseId) : null, open = l.status === 'open';
+  const contactTxt = l.contact.map(x => ({ phone: 'טלפון', whatsapp: 'וואטסאפ', site: 'הודעה באתר' }[x])).join(', ');
+  const phoneIntl = (s.phone || '').replace(/^0/, '972');
+  return `<div class="lead-card ${l.status === 'new' ? 'new' : ''}" id="lead-${l.id}">
+    <div class="row" style="justify-content:space-between"><div class="row" style="gap:6px"><span class="tag brand">${c ? h(c.title) : 'מלוח הבקשות'}</span><span class="tag ${l.status === 'new' ? 'hat' : l.status === 'open' ? 'ok' : ''}">${LEAD_STATUS[l.status]}</span></div><span class="muted small">${ago(l.createdAt)}${s.phoneVerified ? ' · ✓ טלפון מאומת' : ''}</span></div>
+    <div><b>${h(open ? s.name : s.name.split(' ')[0])}</b> · ${h(s.city)}</div>
+    <div>"${h(l.want)}"</div>
+    <div class="muted small">רמה: ${SLEVEL[l.level]} · ${MODES[l.mode] || ''} · להתחיל ${STARTS[l.start]}${l.hours ? ' · ' + h(l.hours) : ''} · חזרה ב: ${contactTxt}</div>
+    ${open ? `<div class="row"><a class="btn sm primary" href="tel:${h(s.phone)}">📞 ${h(s.phone)}</a><a class="btn sm" href="https://wa.me/${h(phoneIntl)}" target="_blank" rel="noopener">וואטסאפ</a><span class="muted small" dir="ltr">${h(s.email)}</span>
+        <a class="btn sm" href="#/messages/${l.id}">הודעות</a>
+        <select data-progress="${l.id}" style="width:auto;min-height:32px;padding:3px 8px">${opts(PROGRESS, l.progress)}</select>
+        <button class="btn sm danger" data-report="${l.id}">דיווח על ליד לא תקין</button></div>`
+      : l.status === 'new' ? `<div class="row"><span class="lock">🔒 טלפון ומייל <span class="blur">05X-XXXXXXX</span></span>
+        <button class="btn sm primary" data-unlock="${l.id}">פתיחה ב-${nis(l.price)}</button><button class="btn sm" data-decline="${l.id}">לא מתאים לי</button></div>` : ''}
+  </div>`;
+}
+function bindLeadButtons() {
+  $$('[data-unlock]').forEach(b => b.onclick = async () => {
+    const l = byId('leads', b.dataset.unlock), u = me();
+    if (u.wallet < l.price) return modal(`<h2>אין מספיק יתרה</h2><p>פתיחת הליד עולה ${nis(l.price)} והיתרה שלך ${nis(u.wallet)}.</p><div class="acts"><a class="btn primary" href="#/credits?back=${encodeURIComponent('#/leads?id=' + l.id)}" data-close>טעינת יתרה</a><button class="btn" data-close>סגירה</button></div>`);
+    if (await api('lead/unlock', { id: l.id })) toast(`הליד נפתח · נוכו ${nis(l.price)}`);
+    route();
+  });
+  $$('[data-decline]').forEach(b => b.onclick = async () => { if (await api('lead/decline', { id: b.dataset.decline })) toast('סומן "לא מתאים". התלמיד יוכל לפנות למורה אחר.'); route(); });
+  $$('[data-progress]').forEach(s => s.onchange = async () => { if (await api('lead/progress', { id: s.dataset.progress, progress: s.value })) toast('עודכן'); });
+  $$('[data-report]').forEach(b => b.onclick = () => {
+    modal(`<h2>דיווח על ליד לא תקין</h2><p class="muted small">אפשר לדווח תוך 7 ימים מהפתיחה. אם הדיווח יאושר, הסכום יוחזר ליתרה.</p>
+      <label class="f"><span>סיבה</span><select id="rr">${opts({ wrong: 'מספר שגוי או לא קיים', joke: 'פנייה לא רצינית', dup: 'פנייה כפולה', other: 'אחר' }, 'wrong')}</select></label>
+      <label class="f" style="margin-top:10px"><span>פירוט</span><textarea id="rt"></textarea></label><div class="acts"><button class="btn primary" id="rr-ok">שליחה</button><button class="btn" data-close>ביטול</button></div>`);
+    $('#rr-ok').onclick = async () => { if (await api('lead/report', { id: b.dataset.report, reason: $('#rr').value, text: $('#rt').value })) { closeModal(); toast('הדיווח נשלח למנהל'); } };
+  });
+}
+pages.leads = params => {
+  const g = needTeacher('#/leads'); if (g) return g;
+  const u = me(), st = params.get('st') || 'all', focus = params.get('id');
+  let ls = DB.leads.filter(l => l.teacherId === u.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (st !== 'all') ls = ls.filter(l => l.status === st);
+  return teacherShell('#/leads', `<h1 class="page-title" style="margin-top:0">לידים</h1>
+    <p class="muted" style="margin:0 0 10px">כל ליד מוצג בלי פרטי קשר. מחיר הפתיחה נקבע לפי הקורס. יתרה: <b>${nis(u.wallet)}</b> · <a href="#/credits">טעינה</a></p>
+    <nav class="tabs">${Object.entries({ all: 'הכל', new: 'חדשים', open: 'פתוחים', declined: 'לא מתאימים', expired: 'נסגרו' }).map(([k, v]) => `<a href="#/leads?st=${k}" class="${k === st ? 'on' : ''}">${v}</a>`).join('')}</nav>
+    <div class="list">${ls.map(leadCard).join('') || '<div class="empty">אין לידים כאן.</div>'}</div>`);
+};
+pages.leads.after = params => { bindLeadButtons(); const id = params.get('id'); if (id && $('#lead-' + id)) $('#lead-' + id).scrollIntoView({ block: 'center' }); };
+
+/* ---------- credits & Nedarim demo ---------- */
+let payWatch = null;
+window.addEventListener('message', e => {
+  if (e.origin !== 'https://www.matara.pro' || !e.data) return;
+  const fr = $('#NedarimFrame');
+  if (e.data.Name === 'Height' && fr) fr.style.height = (parseInt(e.data.Value, 10) + 10) + 'px';
+  if (e.data.Name === 'TransactionResponse' && e.data.Value && e.data.Value.Status === 'OK' && payWatch) payWatch();
+});
+async function startTopup(i, back, zeout) {
+  const p = DB.packs[i];
+  const j = await api('pay/create', { pack: i, zeout: zeout || '' });
+  if (!j) return;
+  if (j.needId) {
+    modal(`<h2>מספר זהות</h2><p class="muted">נדרים פלוס מבקשים מספר זהות לתשלום. הוא עובר ישירות אליהם ולא נשמר אצלנו.</p>
+      <form id="zeout-f" class="stack"><label class="f"><span>מספר זהות</span><input type="text" name="z" inputmode="numeric" pattern="[0-9]{4,9}" maxlength="9" required autocomplete="off"></label>
+      <div class="acts"><button class="btn primary">המשך לתשלום</button><button class="btn" type="button" data-close>ביטול</button></div></form>`);
+    $('#zeout-f').onsubmit = e => { e.preventDefault(); const z = e.target.z.value; closeModal(); startTopup(i, back, z); };
+    return;
+  }
+  modal(`<h2>טעינת יתרה ${nis(p.amount)}${p.bonus ? ` <small class="muted">(+${nis(p.bonus)} מתנה)</small>` : ''}</h2>
+    <p class="muted small">תשלום מאובטח דרך נדרים פלוס. פרטי הכרטיס לא עוברים דרכנו.</p>
+    <div id="pay-box"><iframe id="NedarimFrame" src="${h(j.iframe)}" allow="payment" title="תשלום בנדרים פלוס" style="width:100%;border:0;height:520px"></iframe></div>
+    <div id="pay-wait" hidden><h3 id="wait-t">מאשרים את התשלום...</h3><p class="muted" id="wait-x">זה לוקח כמה שניות.</p></div>
+    <div class="acts"><button class="btn" data-close>סגירה</button></div>`);
+  let polling = false;
+  const finish = async (title, text) => {
+    $('#pay-box') && ($('#pay-box').hidden = true); if ($('#pay-wait')) { $('#pay-wait').hidden = false; $('#wait-t').textContent = title; $('#wait-x').textContent = text; }
+    await loadState();
+  };
+  payWatch = async () => {
+    if (polling) return; polling = true;
+    finish('מאשרים את התשלום...', 'זה לוקח כמה שניות.');
+    for (let k = 0; k < 40; k++) {
+      try { const r = await (await fetch(BASE + '/pay/status/' + j.token, { credentials: 'same-origin' })).json(); if (r.status === 'paid') { await finish('התשלום התקבל, תודה!', 'היתרה נטענה.'); payWatch = null; toast('היתרה נטענה'); setTimeout(() => { closeModal(); back ? go(back) : route(); }, 1400); return; } } catch (e) { /* again */ }
+      await new Promise(res => setTimeout(res, 2500));
+    }
+    finish('התשלום בוצע', 'האישור מנדרים פלוס עוד לא הגיע. היתרה תיטען אוטומטית בדקות הקרובות.');
+  };
+}
+pages.credits = params => {
+  const g = needTeacher('#/credits'); if (g) return g;
+  const u = me(), log = DB.ledger.slice().sort((a, b) => b.at.localeCompare(a.at)), PACKS = DB.packs;
+  let bal = u.wallet;
+  const rows = log.map(x => { const r = `<tr><td>${fmtDate(x.at)}</td><td>${{ topup: 'טעינה', lead: 'פתיחת ליד', refund: 'החזר מהמנהל', manual: 'עדכון ידני', highlight: 'הדגשת קורס' }[x.kind] || ''}</td><td>${h(x.note)}</td><td style="color:${x.amount < 0 ? 'var(--danger)' : 'var(--ok)'};font-weight:700" dir="ltr">${x.amount < 0 ? '−' : '+'}${nis(Math.abs(x.amount))}</td><td>${nis(bal)}</td></tr>`; bal -= x.amount; return r; }).join('');
+  return teacherShell('#/credits', `<h1 class="page-title" style="margin-top:0">יתרה ותשלומים</h1>
+    <div class="card"><div class="balance"><b>${nis(u.wallet)}</b><span class="muted">יתרה לפתיחת לידים</span></div><p class="muted small" style="margin:6px 0 0">כל קורס מחויב לפי מחיר הליד של התחום שלו.${u.teacher.fields[0] ? ` למשל ${h(field(u.teacher.fields[0]).name)}: ${nis(field(u.teacher.fields[0]).leadPrice)} לליד.` : ''}</p></div>
+    ${DB.payOnline ? '' : '<div class="notice warn">התשלום המקוון עדיין לא הופעל באתר. בינתיים מנהל האתר יכול לטעון יתרה ידנית.</div>'}
+    <section class="sec"><h2 style="font-size:22px">טעינת יתרה</h2><div class="packs">${PACKS.map((p, i) => `<div class="pack ${p.pop ? 'pop' : ''}">${p.pop ? '<span class="tag brand" style="justify-self:center">הכי משתלם</span>' : ''}<div class="amt">${nis(p.amount)}</div>
+      <div class="muted small">${p.bonus ? `+ ${nis(p.bonus)} מתנה` : 'בלי מתנה'}</div><button class="btn ${p.pop ? 'primary' : ''}" data-pack="${i}" ${DB.payOnline ? '' : 'disabled'}>טעינה</button></div>`).join('')}</div></section>
+    <section class="sec"><h2 style="font-size:22px">היסטוריה</h2><div class="scroll-x"><table class="t"><tr><th>תאריך</th><th>פעולה</th><th>פירוט</th><th>סכום</th><th>יתרה</th></tr>${rows || '<tr><td colspan="5">אין פעולות</td></tr>'}</table></div>
+    <p class="muted small">על כל טעינה נשלחת קבלה מנדרים פלוס למייל.</p></section>`);
+};
+pages.credits.after = params => {
+  $$('[data-pack]').forEach(b => b.onclick = () => startTopup(+b.dataset.pack, params.get('back')));
+};
+
+/* ---------- courses list & editor ---------- */
+pages.courses = () => {
+  const g = needTeacher('#/courses'); if (g) return g;
+  const cs = DB.courses.filter(c => c.teacherId === me().id);
+  return teacherShell('#/courses', `<div class="row" style="justify-content:space-between"><h1 class="page-title" style="margin-top:0">הקורסים שלי</h1><a class="btn primary" href="#/course/new">קורס חדש</a></div>
+    <div class="list">${cs.map(c => `<div class="item"><div class="grow"><div class="t">${h(c.title)}</div><div class="muted small">${h(field(c.fieldId).name)} · ${nis(c.price)} ${c.priceType === 'lesson' ? 'לשיעור' : 'לקורס'} · מחיר ליד ${nis(leadPriceFor(c))}</div></div>${statusTag(c.status)}
+      <a class="btn sm" href="#/course/${c.id}">צפייה</a><a class="btn sm" href="#/course/${c.id}/edit">עריכה</a>
+      ${c.status === 'active' ? `<button class="btn sm" data-hide="${c.id}">הסתרה</button>` : c.status === 'hidden' ? `<button class="btn sm" data-show="${c.id}">הצגה</button>` : ''}</div>`).join('') || '<div class="empty">עוד אין קורסים. <a href="#/course/new">כתיבת קורס ראשון</a></div>'}</div>`);
+};
+pages.courses.after = () => {
+  $$('[data-hide]').forEach(b => b.onclick = async () => { await api('course/visibility', { id: b.dataset.hide, hide: true }); route(); });
+  $$('[data-show]').forEach(b => b.onclick = async () => { await api('course/visibility', { id: b.dataset.show, hide: false }); route(); });
+};
+pages.editCourse = (params, id) => {
+  const u = me(); if (!u) return gate(location.hash);
+  if (!u.teacher) return `<div class="wrap"><div class="empty" style="margin-top:40px">קודם צריך <a href="#/join">להצטרף כמורה</a>.</div></div>`;
+  if (u.teacher.status === 'rejected') return `<div class="wrap"><div class="empty" style="margin-top:40px">הבקשה להצטרף כמורה לא אושרה. <a href="#/join">לפרטים</a></div></div>`;
+  const c = id ? byId('courses', id) : { title: '', fieldId: u.teacher.fields[0], track: 'practical', level: 'begin', outcomes: ['', '', ''], description: '', syllabus: [{ title: '', desc: '' }, { title: '', desc: '' }], bring: '', modes: u.teacher.modes.slice(), sessions: 2, duration: 90, group: 'single', groupMax: 4, priceType: 'lesson', price: '', trial: { on: false, price: 0 } };
+  if (id && (!c || (c.teacherId !== u.id && u.role !== 'admin'))) return notFound();
+  const tf = DB.fields.filter(f => u.teacher.fields.includes(f.id));
+  return `<div class="wrap"><h1 class="page-title">${id ? 'עריכת קורס' : 'קורס חדש'}</h1>
+    <div class="course-layout"><form class="stack" id="course-form" style="gap:18px">
+      <div class="card stack"><h2>בסיס</h2>
+        <label class="f"><span>שם הקורס <i>*</i></span><input type="text" name="title" maxlength="80" required value="${h(c.title)}" placeholder="למשל: חשמל ביתי מעשי למתחילים"></label>
+        <div class="g3"><label class="f"><span>תחום <i>*</i></span><select name="fieldId">${tf.map(f => `<option value="${f.id}" ${f.id === c.fieldId ? 'selected' : ''}>${h(f.name)}</option>`).join('')}</select></label>
+          <label class="f"><span>מסלול <i>*</i></span><select name="track">${opts(TRACKS, c.track)}</select></label>
+          <label class="f"><span>רמה <i>*</i></span><select name="level">${opts(LEVELS, c.level)}</select></label></div>
+        <div class="notice info small" style="margin:0" id="lead-price-note"></div>
+      </div>
+      <div class="card stack"><h2>תוכן</h2>
+        <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">מה תדע לעשות בסוף <i style="color:var(--danger);font-style:normal">*</i> (3 עד 6 שורות)</span>
+          <div class="stack" id="outcomes" style="gap:6px">${c.outcomes.map(o => `<input type="text" name="outcome" value="${h(o)}" maxlength="90">`).join('')}</div>
+          <button type="button" class="btn sm" id="add-outcome" style="justify-self:start">שורה נוספת</button></div>
+        <label class="f"><span>תיאור <i>*</i></span><textarea name="description" maxlength="1500" required>${h(c.description)}</textarea><span class="small" id="desc-warn" style="color:var(--danger)"></span></label>
+        <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">סילבוס: מפגש אחרי מפגש <i style="color:var(--danger);font-style:normal">*</i></span>
+          <div class="stack" id="syllabus" style="gap:8px">${c.syllabus.map((s, i) => sylRow(s, i)).join('')}</div>
+          <button type="button" class="btn sm" id="add-session" style="justify-self:start">מפגש נוסף</button></div>
+        <label class="f"><span>מה צריך להביא</span><input type="text" name="bring" value="${h(c.bring)}"></label>
+      </div>
+      <div class="card stack"><h2>איך לומדים</h2>
+        <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">אופן לימוד <i style="color:var(--danger);font-style:normal">*</i></span>${modeChecks('modes', c.modes)}</div>
+        <div class="g3"><label class="f"><span>מספר מפגשים</span><input type="number" name="sessions" value="${c.syllabus.length}" readonly></label>
+          <label class="f"><span>אורך מפגש</span><select name="duration">${[45, 60, 90, 120, 150, 180].map(m => `<option value="${m}" ${+c.duration === m ? 'selected' : ''}>${m} דקות</option>`).join('')}</select></label>
+          <label class="f"><span>יחיד או קבוצה</span><select name="group">${opts({ single: 'יחיד', group: 'קבוצה' }, c.group)}</select></label></div>
+        <label class="f" id="gmax" ${c.group === 'group' ? '' : 'hidden'}><span>מקסימום משתתפים</span><input type="number" name="groupMax" min="2" max="20" value="${c.groupMax}"></label>
+      </div>
+      <div class="card stack"><h2>מחיר</h2>
+        <div class="g2"><label class="f"><span>סוג מחיר <i>*</i></span><select name="priceType">${opts({ lesson: 'לשיעור', course: 'לכל הקורס' }, c.priceType)}</select></label>
+          <label class="f"><span>מחיר (₪) <i>*</i></span><input type="number" name="price" min="0" required value="${h(c.price)}"></label></div>
+        <label class="row small"><input type="checkbox" name="trialOn" value="1" ${c.trial.on ? 'checked' : ''}> שיעור היכרות</label>
+        <label class="f" id="trial-price" ${c.trial.on ? '' : 'hidden'}><span>מחיר שיעור היכרות (0 = חינם)</span><input type="number" name="trialPrice" min="0" value="${c.trial.price}"></label>
+      </div>
+      <div class="row"><button class="btn" name="as" value="draft">שמירה כטיוטה</button><button class="btn primary" name="as" value="send">${id && c.status === 'active' ? 'שמירה' : 'שליחה לאישור'}</button></div>
+    </form>
+    <aside class="side-sticky"><b>כך הקורס ייראה בחיפוש</b><div id="preview"></div></aside></div></div>`;
+};
+const sylRow = (s, i) => `<div class="row" style="align-items:flex-start;flex-wrap:nowrap" data-syl><span class="avatar" style="border-radius:8px;background:var(--ink);color:#fff">${i + 1}</span>
+  <div class="stack" style="flex:1;gap:4px"><input type="text" name="sylTitle" value="${h(s.title)}" placeholder="שם המפגש"><input type="text" name="sylDesc" value="${h(s.desc)}" placeholder="שורת פירוט (לא חובה)"></div>
+  <button type="button" class="btn sm" data-up title="למעלה">↑</button><button type="button" class="btn sm danger" data-del title="מחיקה">✕</button></div>`;
+pages.editCourse.after = (params, id) => {
+  const f = $('#course-form'); if (!f) return;
+  const u = me();
+  const read = () => {
+    const d = formData(f);
+    return { ...(id ? byId('courses', id) : {}), title: d.title || 'שם הקורס', fieldId: d.fieldId, track: d.track, level: d.level,
+      outcomes: $$('[name=outcome]', f).map(i => i.value.trim()).filter(Boolean), description: d.description,
+      syllabus: $$('[data-syl]', f).map(r => ({ title: $('[name=sylTitle]', r).value.trim(), desc: $('[name=sylDesc]', r).value.trim() })).filter(s => s.title),
+      bring: d.bring, modes: checked(f, 'modes'), sessions: $$('[data-syl]', f).length, duration: +d.duration, group: d.group, groupMax: +d.groupMax || 4,
+      priceType: d.priceType, price: +d.price || 0, trial: { on: !!d.trialOn, price: +d.trialPrice || 0 }, teacherId: id ? byId('courses', id).teacherId : u.id, id: id || 'preview', highlighted: id ? byId('courses', id).highlighted : false };
+  };
+  const renumber = () => { $$('[data-syl]', f).forEach((r, i) => { $('.avatar', r).textContent = i + 1; }); f.sessions.value = $$('[data-syl]', f).length; };
+  const draw = () => {
+    const c = read();
+    $('#preview').innerHTML = courseCard({ ...c, modes: c.modes.length ? c.modes : ['front'] }).replace('<a class="cc', '<div class="cc').replace(/<\/a>$/, '</div>');
+    $('#lead-price-note').textContent = `מחיר ליד בקורס הזה: ${nis(field(c.fieldId).leadPrice)} (נקבע לפי התחום). משלמים רק על ליד שפותחים.`;
+    $('#desc-warn').textContent = /(\d[\d\- ]{7,}\d)|@|https?:|www\./.test(c.description) ? 'נראה שיש בתיאור טלפון, מייל או קישור. פרטי קשר נמסרים רק דרך ליד.' : '';
+    $('#gmax').hidden = c.group !== 'group'; $('#trial-price').hidden = !c.trial.on;
+  };
+  f.oninput = draw; f.onchange = draw;
+  $('#add-outcome').onclick = () => { if ($$('[name=outcome]', f).length >= 6) return toast('עד 6 שורות'); $('#outcomes').insertAdjacentHTML('beforeend', '<input type="text" name="outcome" maxlength="90">'); };
+  $('#add-session').onclick = () => { $('#syllabus').insertAdjacentHTML('beforeend', sylRow({ title: '', desc: '' }, $$('[data-syl]', f).length)); renumber(); draw(); };
+  $('#syllabus').onclick = e => {
+    const r = e.target.closest('[data-syl]'); if (!r) return;
+    if (e.target.closest('[data-del]')) { if ($$('[data-syl]', f).length <= 1) return toast('צריך לפחות מפגש אחד'); r.remove(); }
+    if (e.target.closest('[data-up]') && r.previousElementSibling) r.parentNode.insertBefore(r, r.previousElementSibling);
+    renumber(); draw();
+  };
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const as = e.submitter ? e.submitter.value : 'send', c = read();
+    if (as === 'send') {
+      if (c.outcomes.length < 3) return toast('צריך לפחות 3 שורות ב"מה תדע לעשות"');
+      if (!c.syllabus.length) return toast('צריך לפחות מפגש אחד בסילבוס');
+      if (!c.modes.length) return toast('בחר אופן לימוד');
+      if (!c.price) return toast('צריך מחיר');
+    }
+    if (!c.description) return toast('צריך תיאור');
+    const j = await api('course/save', { ...c, id: id || null, title: f.title.value.trim(), as });
+    if (!j) return;
+    toast(j.status === 'pending' ? 'נשלח לאישור המנהל' : j.status === 'draft' ? 'נשמר כטיוטה' : 'נשמר');
+    go(isTeacher(u) ? '#/courses' : '#/join');
+  };
+  draw();
+};
+
+/* ---------- lessons calendar & profile (teacher) ---------- */
+pages.lessons = () => {
+  const g = needTeacher('#/lessons'); if (g) return g;
+  const u = me(), vs = DB.lessons.filter(v => { const l = byId('leads', v.leadId); return l && l.teacherId === u.id; }).sort((a, b) => a.at.localeCompare(b.at));
+  return teacherShell('#/lessons', `<h1 class="page-title" style="margin-top:0">יומן שיעורים</h1><p class="muted">שיעורים בווידאו נקבעים מתוך ההודעות עם התלמיד.</p><div class="list">${vs.map(lessonItem).join('') || '<div class="empty">אין שיעורים.</div>'}</div>`);
+};
+pages.profile = () => {
+  const g = needTeacher('#/profile'); if (g) return g;
+  const t = me().teacher;
+  return teacherShell('#/profile', `<h1 class="page-title" style="margin-top:0">פרופיל מורה</h1>
+    <form class="card stack" id="tprof"><div class="g2"><label class="f"><span>שנות ניסיון</span><input type="number" name="years" value="${t.years}"></label><label class="f"><span>איפה אני עובד היום</span><input type="text" name="workplace" value="${h(t.workplace || '')}"></label></div>
+      <label class="f"><span>עליי</span><textarea name="about" maxlength="800">${h(t.about)}</textarea></label>
+      <label class="f"><span>זמינות</span><input type="text" name="availability" value="${h(t.availability)}"></label>
+      <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">אופני לימוד</span>${modeChecks('modes', t.modes)}</div>
+      <div class="row"><button class="btn primary">שמירה</button><a class="btn" href="#/teacher/${me().id}">צפייה בפרופיל הציבורי</a></div></form>`);
+};
+pages.profile.after = () => { const f = $('#tprof'); if (f) f.onsubmit = async e => { e.preventDefault(); const d = formData(f); if (await api('teacher/profile', { years: +d.years, workplace: d.workplace, about: d.about, availability: d.availability, modes: checked(f, 'modes') })) toast('נשמר'); }; };
+
+/* ---------- messages ---------- */
+pages.messages = (params, leadId) => {
+  const u = me(); if (!u) return gate('#/messages');
+  const mine = DB.leads.filter(l => l.status === 'open' && (l.teacherId === u.id || l.studentId === u.id));
+  const cur = leadId ? byId('leads', leadId) : mine[0];
+  const other = l => byId('users', l.teacherId === u.id ? l.studentId : l.teacherId) || { name: '' };
+  const last = l => DB.messages.filter(m => m.leadId === l.id).slice(-1)[0];
+  mine.sort((a, b) => ((last(b) || {}).at || b.openedAt || '').localeCompare((last(a) || {}).at || a.openedAt || ''));
+  if (cur && cur.status !== 'open') return `<div class="wrap"><div class="empty" style="margin-top:40px">השיחה תיפתח אחרי שהמורה יפתח את הפנייה.</div></div>`;
+  if (cur && DB.messages.some(m => m.leadId === cur.id && m.to === u.id && !m.read)) {
+    DB.messages.filter(m => m.leadId === cur.id && m.to === u.id).forEach(m => { m.read = true; });
+    fetch(BASE + '/api/message/read', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': CSRF, 'Content-Type': 'application/json' }, body: JSON.stringify({ leadId: cur.id }) }).catch(() => {});
+  }
+  const isT = cur && cur.teacherId === u.id;
+  const c = cur && (cur.courseId ? byId('courses', cur.courseId) : null);
+  return `<div class="wrap"><h1 class="page-title">הודעות</h1>
+    ${mine.length ? `<div class="chat"><div class="convs">${mine.map(l => { const o = other(l), m = last(l), unread = DB.messages.some(x => x.leadId === l.id && x.to === u.id && !x.read);
+      return `<a class="conv ${cur && cur.id === l.id ? 'on' : ''}" href="#/messages/${l.id}">${avatar(o)}<div class="grow"><b>${h(o.name)}</b>${unread ? '<span class="pill-count">חדש</span>' : ''}<div class="last">${h(m ? (m.text || '📎 ' + m.file) : 'אין עדיין הודעות')}</div></div></a>`; }).join('')}</div>
+      <div class="thread">${cur ? `<div class="thread-head">${avatar(other(cur))}<div style="flex:1"><b>${h(other(cur).name)}</b><div class="muted small">${c ? h(c.title) : 'מלוח הבקשות'}</div></div>
+          ${isT ? '<button class="btn sm primary" id="schedule">קביעת שיעור בווידאו</button>' : ''}<button class="btn sm" id="report-chat">דיווח</button></div>
+        <div class="msgs" id="msgs">${DB.messages.filter(m => m.leadId === cur.id).map(m => `<div class="msg ${m.from === u.id ? 'me' : ''}">${h(m.text)}${m.file ? `<div><a href="${h(m.fileUrl)}" target="_blank" rel="noopener">📎 ${h(m.file)}</a></div>` : ''}<time>${fmtDT(m.at)}</time></div>`).join('') || '<div class="muted small" style="text-align:center">כתבו את ההודעה הראשונה</div>'}
+          ${DB.lessons.filter(v => v.leadId === cur.id).map(v => `<div class="notice info small" style="align-self:center">שיעור בווידאו נקבע ל-${fmtDT(v.at)} · <a href="#/room/${v.id}">לחדר השיעור</a></div>`).join('')}</div>
+        <form class="composer" id="composer"><input type="text" name="text" maxlength="2000" placeholder="כתיבת הודעה" autocomplete="off"><label class="btn sm" title="צירוף קובץ">📎<input type="file" name="file" accept="image/*,.pdf" hidden></label><button class="btn primary">שליחה</button></form>` : ''}</div></div>`
+      : '<div class="empty">אין עדיין שיחות. שיחה נפתחת אחרי שמורה פותח פנייה.</div>'}</div>`;
+};
+pages.messages.after = (params, leadId) => {
+  const box = $('#msgs'); if (box) box.scrollTop = box.scrollHeight;
+  const u = me(), l = leadId ? byId('leads', leadId) : DB.leads.find(x => x.status === 'open' && (x.teacherId === u.id || x.studentId === u.id));
+  const comp = $('#composer');
+  if (comp && l) {
+    comp.file.onchange = () => { if (comp.file.files[0]) toast('צורף: ' + comp.file.files[0].name); };
+    comp.onsubmit = async e => {
+      e.preventDefault(); const t = comp.text.value.trim(), file = comp.file.files[0];
+      if (!t && !file) return;
+      if (!await api('message/send', {}, withFile({ leadId: l.id, text: t }, file))) return;
+      go('#/messages/' + l.id);
+    };
+    startChatPoll(l.id);
+  }
+  const sc = $('#schedule');
+  if (sc) sc.onclick = () => {
+    const c = l.courseId ? byId('courses', l.courseId) : null;
+    const tm = new Date(Date.now() + 864e5); tm.setMinutes(0, 0, 0);
+    const local = new Date(tm - tm.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+    modal(`<h2>קביעת שיעור בווידאו</h2><form class="stack" id="sched">
+      <label class="f"><span>תאריך ושעה <i>*</i></span><input type="datetime-local" name="at" required value="${local}"></label>
+      <div class="g2"><label class="f"><span>משך <i>*</i></span><select name="duration">${[45, 60, 90, 120].map(m => `<option ${m === (c ? c.duration : 60) ? 'selected' : ''} value="${m}">${m} דקות</option>`).join('')}</select></label>
+        <label class="f"><span>שיעור חוזר</span><select name="repeat">${opts({ once: 'פעם אחת', weekly: 'כל שבוע (4 פעמים)' }, 'once')}</select></label></div>
+      <label class="f"><span>נושא</span>${c ? `<select name="topic"><option value="">חופשי</option>${c.syllabus.map(s => `<option>${h(s.title)}</option>`).join('')}</select>` : '<input type="text" name="topic">'}</label>
+      <p class="muted small" style="margin:0">התלמיד יקבל מייל עם ההזמנה ותזכורת שעה לפני.</p>
+      <div class="acts"><button class="btn primary">קביעה</button><button class="btn" type="button" data-close>ביטול</button></div></form>`);
+    $('#sched').onsubmit = async e => {
+      e.preventDefault(); const d = formData(e.target);
+      if (!await api('lesson/create', { leadId: l.id, at: d.at, tzOffset: new Date(d.at).getTimezoneOffset(), duration: +d.duration, topic: d.topic, repeat: d.repeat })) return;
+      closeModal(); toast('השיעור נקבע'); route();
+    };
+  };
+  const rc = $('#report-chat'); if (rc) rc.onclick = () => {
+    modal(`<h2>דיווח על השיחה</h2><p class="muted small">המנהל יבדוק את השיחה. מה קרה?</p><textarea id="rct" maxlength="500"></textarea><div class="acts"><button class="btn primary" id="rc-ok">שליחה</button><button class="btn" data-close>ביטול</button></div>`);
+    $('#rc-ok').onclick = async () => { if (await api('lead/report', { id: l.id, reason: 'chat', text: $('#rct').value })) { closeModal(); toast('השיחה נשלחה לבדיקת המנהל'); } };
+  };
+};
+
+/* ---------- video room (WebRTC between the two browsers; the server only relays connection messages) ---------- */
+let stream = null, pc = null, rtcTimer = null, rtcLast = 0, rtcLesson = null, screenTrack = null;
+pages.room = (params, id) => {
+  const u = me(); if (!u) return gate('#/room/' + id);
+  const v = byId('lessons', id); if (!v) return notFound();
+  const l = byId('leads', v.leadId);
+  if (!l || (u.id !== l.teacherId && u.id !== l.studentId)) return `<div class="wrap"><div class="empty" style="margin-top:40px">החדר הזה פתוח רק למורה ולתלמיד של השיעור.</div></div>`;
+  const other = byId('users', u.id === l.teacherId ? l.studentId : l.teacherId) || { name: '' }, c = l.courseId ? byId('courses', l.courseId) : null, isT = u.id === l.teacherId;
+  const start = new Date(v.at), early = Date.now() < start - 10 * 6e4;
+  return `<div class="wrap"><div class="row" style="justify-content:space-between;margin-top:22px"><div><h1 style="font-size:26px">שיעור עם ${h(other.name)}</h1><div class="muted small">${fmtDT(v.at)} · ${v.duration} דק׳${v.topic ? ' · ' + h(v.topic) : ''} · ללא הקלטה</div></div><a class="btn" href="#/messages/${l.id}">חזרה להודעות</a></div>
+    ${early ? `<div class="notice info">השיעור מתחיל ${fmtDT(v.at)}. אפשר להיכנס כבר עכשיו ולבדוק מצלמה ומיקרופון.</div>` : ''}
+    <div class="room"><div class="stage" id="stage"><div class="other" id="other">${avatar(other)}<b>${h(other.name)}</b><div class="small" id="other-st">לחץ "הצטרפות" כדי להתחיל</div></div>
+        <span class="status" id="rtc-st">לא מחובר</span>
+        <div class="self" id="self">המצלמה שלך</div>
+        <div class="room-bar"><button id="join" style="background:var(--ok)">הצטרפות</button><button id="mic" hidden>מיקרופון</button><button id="cam" hidden>מצלמה</button><button id="share" hidden>שיתוף מסך</button><button id="leave" class="off">יציאה</button></div></div>
+      <div class="room-side"><b>תוכנית השיעור</b>${c ? `<p class="muted small" style="margin:4px 0 8px">${isT ? 'סמן נושאים שנלמדו' : 'הנושאים שהמורה סימן'}</p>${c.syllabus.map((s, i) => `<label><input type="checkbox" data-done="${i}" ${v.done.includes(i) ? 'checked' : ''} ${isT ? '' : 'disabled'}> ${i + 1}. ${h(s.title)}</label>`).join('')}` : '<p class="muted small">שיעור מלוח הבקשות, ללא סילבוס.</p>'}
+        <hr style="border:0;border-top:1px solid var(--line)"><b>טיפים</b><div class="muted small">עדיף אוזניות. אם אין חיבור אחרי דקה, יוצאים ונכנסים שוב. השיחה עוברת ישירות בין שני המחשבים ולא מוקלטת.</div></div></div></div>`;
+};
+async function rtcSend(type, data) {
+  try { await fetch(BASE + '/rtc/' + rtcLesson, { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF': CSRF, 'Content-Type': 'application/json' }, body: JSON.stringify({ type, data }) }); } catch (e) { /* next poll */ }
+}
+function rtcStatus(t) { const e = $('#rtc-st'); if (e) e.textContent = t; }
+function newPeer(isT) {
+  if (pc) pc.close();
+  pc = new RTCPeerConnection({ iceServers: DB.ice });
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+  pc.onicecandidate = e => { if (e.candidate) rtcSend('ice', e.candidate.toJSON()); };
+  pc.ontrack = e => {
+    let vid = $('#remote');
+    if (!vid) { vid = document.createElement('video'); vid.id = 'remote'; vid.className = 'remote'; vid.autoplay = true; vid.playsInline = true; $('#stage').prepend(vid); }
+    if (vid.srcObject !== e.streams[0]) vid.srcObject = e.streams[0];
+    $('#other') && ($('#other').hidden = true);
+  };
+  pc.onconnectionstatechange = () => {
+    const st = pc.connectionState;
+    rtcStatus({ connected: 'מחובר', connecting: 'מתחבר...', disconnected: 'החיבור נקטע...', failed: 'החיבור נכשל', new: 'ממתין' }[st] || st);
+    if (st === 'failed' && isT) offer(isT);
+    if (st === 'failed' || st === 'closed') { const r = $('#remote'); if (r) r.remove(); $('#other') && ($('#other').hidden = false); }
+  };
+  return pc;
+}
+async function offer(isT) {
+  newPeer(isT);
+  const o = await pc.createOffer(); await pc.setLocalDescription(o);
+  rtcSend('offer', { type: o.type, sdp: o.sdp });
+}
+async function rtcPoll(isT) {
+  try {
+    const j = await (await fetch(BASE + '/rtc/' + rtcLesson + '?since=' + rtcLast, { credentials: 'same-origin' })).json();
+    if (!j.ok) { rtcStatus(j.error || 'אין גישה'); return; }
+    const first = rtcLast === 0; rtcLast = j.last;
+    if (first) return;
+    for (const m of j.items) {
+      if (m.type === 'hello') { $('#other-st') && ($('#other-st').textContent = 'הצטרף, מתחברים...'); if (isT) await offer(isT); else rtcSend('here', {}); }
+      else if (m.type === 'here' && isT) await offer(isT);
+      else if (m.type === 'offer' && !isT) {
+        newPeer(isT); await pc.setRemoteDescription(m.data);
+        const a = await pc.createAnswer(); await pc.setLocalDescription(a); rtcSend('answer', { type: a.type, sdp: a.sdp });
+      } else if (m.type === 'answer' && isT && pc && pc.signalingState === 'have-local-offer') await pc.setRemoteDescription(m.data);
+      else if (m.type === 'ice' && pc && pc.remoteDescription) { try { await pc.addIceCandidate(m.data); } catch (e) { /* stale */ } }
+      else if (m.type === 'bye') { if (pc) { pc.close(); pc = null; } const r = $('#remote'); if (r) r.remove(); if ($('#other')) { $('#other').hidden = false; $('#other-st').textContent = 'יצא מהשיעור'; } rtcStatus('ממתין'); }
+    }
+  } catch (e) { rtcStatus('אין חיבור לשרת'); }
+}
+pages.room.after = (params, id) => {
+  const v = byId('lessons', id); if (!v || !$('#join')) return;
+  const l = byId('leads', v.leadId), isT = me().id === l.teacherId;
+  $$('[data-done]').forEach(cb => cb.onchange = async () => {
+    const done = $$('[data-done]:checked').map(x => +x.dataset.done);
+    if (await api('lesson/done', { id: v.id, done })) toast('נשמר');
+  });
+  $('#join').onclick = async () => {
+    if (!window.RTCPeerConnection || !navigator.mediaDevices) return toast('הדפדפן הזה לא תומך בשיעורי וידאו. נסה כרום או אדג׳ מעודכן.');
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); }
+    catch (e) { try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); toast('אין גישה למצלמה, מצטרפים בקול בלבד'); } catch (e2) { return toast('צריך לאשר גישה למיקרופון ולמצלמה בדפדפן'); } }
+    const vid = document.createElement('video'); vid.autoplay = true; vid.muted = true; vid.playsInline = true; vid.srcObject = stream; vid.className = 'self-v'; $('#self').replaceWith(vid); vid.id = 'self';
+    ['mic', 'cam', 'share'].forEach(x => { $('#' + x).hidden = false; }); $('#join').hidden = true;
+    $('#other-st').textContent = 'ממתין שיצטרף...'; rtcStatus('ממתין');
+    rtcLesson = v.id; rtcLast = 0;
+    await rtcPoll(isT); await rtcSend('hello', {});
+    rtcTimer = setInterval(() => rtcPoll(isT), 1200);
+  };
+  $('#cam').onclick = () => { if (!stream) return; stream.getVideoTracks().forEach(t => { t.enabled = !t.enabled; }); $('#cam').classList.toggle('off'); };
+  $('#mic').onclick = () => { if (!stream) return; stream.getAudioTracks().forEach(t => { t.enabled = !t.enabled; }); $('#mic').classList.toggle('off'); };
+  $('#share').onclick = async () => {
+    if (!pc) return toast('אפשר לשתף מסך אחרי שהצד השני מחובר');
+    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (!sender) return toast('אין מצלמה פעילה לשיתוף');
+    if (screenTrack) { screenTrack.stop(); return; }
+    try {
+      const ds = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenTrack = ds.getVideoTracks()[0]; await sender.replaceTrack(screenTrack); $('#share').classList.add('off');
+      screenTrack.onended = async () => { screenTrack = null; const cam = stream.getVideoTracks()[0]; if (pc) await sender.replaceTrack(cam); $('#share') && $('#share').classList.remove('off'); };
+    } catch (e) { /* cancelled */ }
+  };
+  $('#leave').onclick = () => { go('#/messages/' + l.id); };
+};
+function stopStream() {
+  if (rtcTimer) { clearInterval(rtcTimer); rtcTimer = null; if (rtcLesson) rtcSend('bye', {}); }
+  if (pc) { pc.close(); pc = null; }
+  if (screenTrack) { screenTrack.stop(); screenTrack = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  rtcLesson = null;
+}
+window.addEventListener('beforeunload', () => { if (rtcLesson) navigator.sendBeacon && rtcSend('bye', {}); });
+
+/* ---------- review ---------- */
+pages.review = (params, leadId) => {
+  const u = me(); if (!u) return gate(location.hash);
+  const l = byId('leads', leadId); if (!l || l.studentId !== u.id || !l.courseId) return notFound();
+  const c = byId('courses', l.courseId) || { title: 'הקורס' };
+  const stars = name => `<div class="checks">${[1, 2, 3, 4, 5].map(n => `<label><input type="radio" name="${name}" value="${n}" ${n === 5 && name === 'stars' ? 'checked' : ''}> ${'★'.repeat(n)}</label>`).join('')}</div>`;
+  return `<div class="wrap" style="max-width:640px"><h1 class="page-title">ביקורת על ${h(c.title)}</h1><p class="lead">הביקורת עוזרת לתלמידים אחרים לבחור. אחת לכל קורס.</p>
+    <form class="card stack" id="rev">
+      <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">דירוג כללי *</span>${stars('stars')}</div>
+      <label class="f"><span>האם למדת את מה שהובטח? *</span><select name="delivered" required>${opts({ yes: 'כן', partly: 'חלקית', no: 'לא' }, 'yes')}</select></label>
+      <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">סבלנות והסבר</span>${stars('patience')}</div>
+      <div class="f"><span class="small" style="font-weight:700;color:var(--ink-2)">עמידה בזמנים</span>${stars('punctual')}</div>
+      <label class="f"><span>מה תרצה לספר?</span><textarea name="text" maxlength="600"></textarea></label>
+      <div><button class="btn primary">פרסום הביקורת</button></div></form></div>`;
+};
+pages.review.after = (params, leadId) => {
+  const f = $('#rev'); if (!f) return;
+  f.onsubmit = async e => {
+    e.preventDefault(); const d = formData(f);
+    const j = await api('review/create', { leadId, stars: +d.stars, delivered: d.delivered, patience: +d.patience || 0, punctual: +d.punctual || 0, text: d.text });
+    if (!j) return;
+    toast('תודה! הביקורת פורסמה'); go('#/course/' + j.courseId);
+  };
+};
+
+/* ---------- admin ---------- */
+pages.admin = params => {
+  const u = me(); if (!u) return gate('#/admin');
+  if (u.role !== 'admin') return `<div class="wrap"><div class="empty" style="margin-top:40px">אזור מנהלים בלבד.</div></div>`;
+  const tab = params.get('tab') || 'overview';
+  const pendT = DB.users.filter(x => x.teacher && x.teacher.status === 'pending');
+  const pendCred = DB.users.filter(x => x.teacher && x.teacher.status === 'approved' && x.teacher.credentials.some(c => c.pending));
+  const pendC = DB.courses.filter(c => c.status === 'pending');
+  const pendR = DB.leadReports.filter(r => r.status === 'pending');
+  const tabs = [['overview', 'סקירה', 0], ['teachers', 'מורים ממתינים', pendT.length], ['creds', 'אימות תעודות', pendCred.length], ['courses', 'קורסים ממתינים', pendC.length], ['fields', 'תחומים ומחירי לידים', 0], ['reports', 'דיווחים', pendR.length], ['users', 'משתמשים', 0], ['payments', 'תשלומים', 0], ['settings', 'הגדרות', 0]];
+  let body = '';
+  if (tab === 'overview') {
+    const today = DB.stats.leadsToday, month = DB.stats.leadsMonth, income = DB.stats.incomeMonth;
+    body = `<div class="stats"><div class="stat"><b>${today}</b><span>לידים היום</span></div><div class="stat"><b>${month}</b><span>לידים החודש</span></div><div class="stat"><b>${nis(income)}</b><span>הכנסות החודש</span></div><div class="stat"><b>${DB.users.filter(isTeacher).length}</b><span>מורים פעילים</span></div></div>
+      <section class="sec"><h2 style="font-size:22px">דורש טיפול</h2><div class="list">${tabs.filter(t => t[2]).map(t => `<a class="item" href="#/admin?tab=${t[0]}" style="text-decoration:none;color:inherit"><div class="grow"><b>${t[1]}</b></div><span class="pill-count">${t[2]}</span></a>`).join('') || '<div class="empty">אין משימות פתוחות.</div>'}</div></section>
+      <section class="sec"><h2 style="font-size:22px">מצב המערכת</h2><div class="list">
+        <div class="item"><div class="grow">תשלום מקוון (נדרים פלוס)</div>${DB.payOnline ? '<span class="tag ok">פעיל</span>' : '<span class="tag danger">לא הוגדר</span>'}</div>
+        <div class="item"><div class="grow">מיילים (שחזור סיסמה והתראות)</div>${DB.mailReady ? '<span class="tag ok">פעיל</span>' : '<span class="tag danger">לא הוגדר</span>'}</div></div></section>`;
+  } else if (tab === 'teachers') {
+    body = pendT.map(t => `<div class="card stack"><div class="row">${avatar(t)}<b>${h(t.name)}</b><span class="muted">${t.gender === 'f' ? 'אישה' : 'גבר'} · ${h(t.city)} · ${h(t.email)}</span></div>
+      <dl class="facts"><div><dt>תחומים</dt><dd>${t.teacher.fields.map(f => h(field(f).name)).join(', ')}${t.teacher.otherField ? ' + הצעה: ' + h(t.teacher.otherField) : ''}</dd></div><div><dt>ניסיון</dt><dd>${t.teacher.years} שנים</dd></div><div><dt>עובד היום</dt><dd>${h(t.teacher.workplace || '—')}</dd></div><div><dt>תעודה</dt><dd>${h((t.teacher.credentials[0] || {}).name || 'ללא')}${(t.teacher.credentials[0] || {}).fileUrl ? ` · <a href="${h(t.teacher.credentials[0].fileUrl)}" target="_blank" rel="noopener">צפייה בקובץ</a>` : ''}</dd></div></dl>
+      <p style="margin:0">${h(t.teacher.about)}</p>
+      <div class="row"><button class="btn primary" data-approve-t="${t.id}">אישור</button><button class="btn danger" data-reject-t="${t.id}">דחייה עם סיבה</button></div></div>`).join('') || '<div class="empty">אין מורים ממתינים.</div>';
+  } else if (tab === 'creds') {
+    body = pendCred.map(t => t.teacher.credentials.filter(c => c.pending).map((c, i) => `<div class="item"><div class="grow"><b>${h(t.name)}</b><div class="muted small">${h(c.name)} · ${c.fileUrl ? `<a href="${h(c.fileUrl)}" target="_blank" rel="noopener">צפייה בקובץ</a>` : 'בלי קובץ'}</div></div><button class="btn sm primary" data-cred-ok="${t.id}">אישור תג מאומת</button><button class="btn sm danger" data-cred-no="${t.id}">דחייה</button></div>`).join('')).join('') || '<div class="empty">אין תעודות לבדיקה.</div>';
+  } else if (tab === 'courses') {
+    body = pendC.map(c => `<div class="item"><div class="grow"><div class="t"><a href="#/course/${c.id}">${h(c.title)}</a></div><div class="muted small">${h((teacherOf(c) || {}).name)} · ${h(field(c.fieldId).name)} · ${c.syllabus.length} מפגשים · ${nis(c.price)}</div></div>
+      <button class="btn sm primary" data-c-ok="${c.id}">אישור</button><button class="btn sm" data-c-back="${c.id}">החזרה לתיקון</button></div>`).join('') || '<div class="empty">אין קורסים ממתינים.</div>';
+  } else if (tab === 'fields') {
+    body = `<div class="scroll-x"><table class="t"><tr><th>תחום</th><th>מוסדר</th><th>מחיר ליד (₪)</th><th>קורסים</th></tr>${DB.fields.map(f => `<tr><td><input type="text" value="${h(f.name)}" data-f-name="${f.id}"></td><td><input type="checkbox" data-f-reg="${f.id}" ${f.regulated ? 'checked' : ''}></td><td><input type="number" min="1" value="${f.leadPrice}" data-f-price="${f.id}" style="width:110px"></td><td>${DB.courses.filter(c => c.fieldId === f.id).length}</td></tr>`).join('')}</table></div>
+      <form class="row" id="add-field" style="margin-top:12px"><input type="text" name="name" placeholder="תחום חדש" required style="width:auto"><input type="number" name="price" placeholder="מחיר ליד" min="1" required style="width:130px"><button class="btn primary">הוספה</button></form>
+      <p class="muted small">מחיר הליד חל על כל קורס בתחום. שינוי נשמר מיד.</p>`;
+  } else if (tab === 'reports') {
+    body = pendR.map(r => { const l = byId('leads', r.leadId) || {}, t = byId('users', l.teacherId) || {}; return `<div class="item"><div class="grow"><b>${{ wrong: 'מספר שגוי', joke: 'פנייה לא רצינית', dup: 'פנייה כפולה', other: 'אחר', chat: 'דיווח על שיחה' }[r.reason]}</b><div class="muted small">מורה: ${h(t.name)} · ${h(r.text)} · ${ago(r.at)}</div></div>
+      ${r.reason !== 'chat' ? `<button class="btn sm primary" data-refund="${r.id}">אישור והחזר ${nis(l.price)}</button>` : ''}<button class="btn sm" data-dismiss="${r.id}">סגירה</button></div>`; }).join('') || '<div class="empty">אין דיווחים פתוחים.</div>';
+  } else if (tab === 'users') {
+    body = `<div class="scroll-x"><table class="t"><tr><th>שם</th><th>מגדר</th><th>תפקיד</th><th>מייל</th><th>יתרה</th><th></th></tr>${DB.users.map(x => `<tr><td>${h(x.name)}</td><td><select data-u-gender="${x.id}" style="width:auto">${opts({ m: 'זכר', f: 'נקבה' }, x.gender)}</select></td><td>${x.role === 'admin' ? 'מנהל' : isTeacher(x) ? 'מורה' : x.teacher ? (x.teacher.status === 'rejected' ? 'מורה שנדחה' : 'מורה ממתין') : 'תלמיד'}${x.blocked ? ' <span class="tag danger">חסום</span>' : ''}</td><td dir="ltr">${h(x.email)}</td><td>${x.teacher ? nis(x.wallet) : '—'}</td>
+      <td>${x.teacher ? `<button class="btn sm" data-credit="${x.id}">הוספת יתרה</button>` : ''}${x.role !== 'admin' ? `<button class="btn sm danger" data-block="${x.id}">${x.blocked ? 'ביטול חסימה' : 'חסימה'}</button>` : ''}</td></tr>`).join('')}</table></div>`;
+  } else if (tab === 'payments') {
+    body = `<div class="scroll-x"><table class="t"><tr><th>תאריך</th><th>מורה</th><th>סכום</th><th>זוכה ביתרה</th><th>עסקה בנדרים</th></tr>${DB.payments.map(p => `<tr><td>${fmtDate(p.at)}</td><td>${h((byId('users', p.teacherId) || {}).name)}</td><td>${nis(p.amount)}</td><td>${nis(p.credit)}</td><td>${h(p.ref)}</td></tr>`).join('')}</table></div>`;
+  } else {
+    body = `<form class="card stack" id="settings"><div class="g3">
+      <label class="f"><span>כמה מורים פותחים בקשה</span><input type="number" name="maxOpensPerRequest" min="1" max="10" value="${DB.settings.maxOpensPerRequest}"></label>
+      <label class="f"><span>מחיר הדגשת קורס (₪)</span><input type="number" name="highlightPrice" min="0" value="${DB.settings.highlightPrice}"></label>
+      <label class="f"><span>תוקף ליד לפני הצעת מורה אחר (שעות)</span><input type="number" name="leadExpiryHours" min="1" value="${DB.settings.leadExpiryHours}"></label>
+      <label class="f"><span>ימי הדגשה</span><input type="number" name="highlightDays" min="1" value="${DB.settings.highlightDays}"></label></div>
+      <div><b>חבילות טעינה</b><div class="muted small">${DB.packs.map(p => `${nis(p.amount)}${p.bonus ? ` (+${nis(p.bonus)})` : ''}`).join(' · ')}</div></div>
+      <div><button class="btn primary">שמירה</button></div></form>`;
+  }
+  return `<div class="wrap"><div class="panel-layout"><nav class="sidemenu">${tabs.map(([k, v, n]) => `<a href="#/admin?tab=${k}" class="${k === tab ? 'on' : ''}">${v}${n ? `<span class="pill-count">${n}</span>` : ''}</a>`).join('')}</nav>
+    <div><h1 class="page-title" style="margin-top:0">${tabs.find(t => t[0] === tab)[1]}</h1><div class="list">${body}</div></div></div></div>`;
+};
+pages.admin.after = () => {
+  const on = (sel, fn) => $$(sel).forEach(b => b.addEventListener('click', async () => { const r = await fn(b); if (r !== false) route(); }));
+  const call = async (a, body, msg) => { const j = await api(a, body); if (j && msg) toast(msg); return j; };
+  on('[data-approve-t]', b => call('admin/teacher', { id: b.dataset.approveT, action: 'approve' }, 'המורה אושר'));
+  on('[data-reject-t]', b => { const why = prompt('סיבת הדחייה (תישלח למורה):'); if (why === null) return false; return call('admin/teacher', { id: b.dataset.rejectT, action: 'reject', reason: why }, 'נדחה'); });
+  on('[data-cred-ok]', b => call('admin/cred', { id: b.dataset.credOk, ok: true }, 'ניתן תג מאומת'));
+  on('[data-cred-no]', b => call('admin/cred', { id: b.dataset.credNo, ok: false }, 'התעודה נדחתה'));
+  on('[data-c-ok]', b => call('admin/course', { id: b.dataset.cOk, action: 'approve' }, 'הקורס עלה לאתר'));
+  on('[data-c-back]', b => { const why = prompt('מה צריך לתקן? (יישלח למורה)'); if (why === null) return false; return call('admin/course', { id: b.dataset.cBack, action: 'back', reason: why }, 'הוחזר למורה לתיקון'); });
+  on('[data-refund]', b => call('admin/report', { id: b.dataset.refund, action: 'refund' }, 'הוחזר ליתרה'));
+  on('[data-dismiss]', b => call('admin/report', { id: b.dataset.dismiss, action: 'close' }));
+  on('[data-credit]', b => { const v = +prompt('כמה להוסיף ליתרה (₪)? אפשר גם מספר שלילי'); if (!v) return false; return call('admin/user', { id: b.dataset.credit, credit: v }, 'עודכן'); });
+  on('[data-block]', b => { const x = byId('users', b.dataset.block); return call('admin/user', { id: x.id, block: !x.blocked }, x.blocked ? 'החסימה בוטלה' : 'נחסם'); });
+  $$('[data-u-gender]').forEach(s => s.onchange = async () => { if (await api('admin/user', { id: s.dataset.uGender, gender: s.value })) toast('עודכן'); });
+  const saveField = async id => { const j = await api('admin/field', { id, name: $(`[data-f-name="${id}"]`).value, regulated: $(`[data-f-reg="${id}"]`).checked, leadPrice: +$(`[data-f-price="${id}"]`).value }); if (j) toast('התחום עודכן'); };
+  $$('[data-f-price],[data-f-reg],[data-f-name]').forEach(i => i.onchange = () => saveField(i.dataset.fPrice || i.dataset.fReg || i.dataset.fName));
+  const af = $('#add-field'); if (af) af.onsubmit = async e => { e.preventDefault(); const d = formData(af); if (await api('admin/field', { new: true, name: d.name, leadPrice: +d.price })) { toast('התחום נוסף'); route(); } };
+  const st = $('#settings'); if (st) st.onsubmit = async e => { e.preventDefault(); const d = formData(st); const b = {}; Object.keys(d).forEach(k => { b[k] = +d[k]; }); if (await api('admin/settings', b)) toast('נשמר'); };
+};
+
+/* ---------- misc ---------- */
+pages.terms = () => `<div class="wrap" style="max-width:760px"><h1 class="page-title">תקנון ומדיניות פרטיות</h1><div class="card stack">
+  <p style="margin:0">טיוטה. את הנוסח הסופי צריך עורך דין.</p>
+  <ol style="margin:0;padding-right:20px;display:grid;gap:8px"><li>האתר מחבר בין מורים לתלמידים ואינו צד להסכם הלימוד ביניהם.</li><li>בתחומים מוסדרים, הלימוד באתר אינו מקנה רישיון.</li><li>פנייה ותקשורת בין מורה לתלמיד מתאפשרות רק בין גבר לגבר ואישה לאישה.</li><li>מורה משלם על פתיחת ליד לפי המחיר שנקבע לקורס. ליד לא תקין שדווח תוך 7 ימים ואושר, מוחזר ליתרה.</li><li>שיעורי וידאו באתר אינם מוקלטים, והשיחה עוברת ישירות בין המשתתפים.</li><li>תשלום על יתרה מתבצע דרך נדרים פלוס. היתרה משמשת לפתיחת לידים ולהדגשת קורסים.</li><li>פרטים אישיים נמסרים למורה רק אחרי שפתח את הפנייה.</li></ol></div></div>`;
+function notFound() { return `<div class="wrap"><div class="empty" style="margin-top:40px"><b>העמוד לא נמצא.</b><br><a href="#/">לדף הבית</a></div></div>`; }
+
+/* ---------------- router ---------------- */
+const ROUTES = [
+  [/^#?\/?$/, 'home'], [/^#\/search$/, 'search'], [/^#\/course\/new$/, 'editCourse'], [/^#\/course\/([\w-]+)\/edit$/, 'editCourse'], [/^#\/course\/([\w-]+)$/, 'course'],
+  [/^#\/teacher\/([\w-]+)$/, 'teacher'], [/^#\/login$/, 'login'], [/^#\/register$/, 'register'], [/^#\/forgot$/, 'forgot'], [/^#\/reset$/, 'reset'], [/^#\/requests$/, 'requests'], [/^#\/requests\/new$/, 'newRequest'],
+  [/^#\/me$/, 'me'], [/^#\/join$/, 'join'], [/^#\/dash$/, 'dash'], [/^#\/leads$/, 'leads'], [/^#\/credits$/, 'credits'], [/^#\/courses$/, 'courses'], [/^#\/lessons$/, 'lessons'],
+  [/^#\/profile$/, 'profile'], [/^#\/messages$/, 'messages'], [/^#\/messages\/([\w-]+)$/, 'messages'], [/^#\/room\/([\w-]+)$/, 'room'], [/^#\/review\/([\w-]+)$/, 'review'],
+  [/^#\/admin$/, 'admin'], [/^#\/terms$/, 'terms'],
+];
+function route() {
+  stopStream();
+  const [path, qs] = (location.hash || '#/').split('?');
+  const params = new URLSearchParams(qs || '');
+  let name = null, arg;
+  for (const [re, n] of ROUTES) { const m = path.match(re); if (m) { name = n; arg = m[1]; break; } }
+  stopChatPoll();
+  renderTop();
+  const page = name && pages[name];
+  $('#app').innerHTML = page ? page(params, arg) : notFound();
+  if (page && page.after) page.after(params, arg);
+  if (!qs || !qs.includes('id=')) window.scrollTo(0, 0);
+}
+/* new messages arrive while a conversation is open */
+let chatTimer = null;
+function stopChatPoll() { if (chatTimer) { clearInterval(chatTimer); chatTimer = null; } }
+function startChatPoll(leadId) {
+  stopChatPoll();
+  chatTimer = setInterval(async () => {
+    if (document.hidden || $('#modal').innerHTML || busy) return;
+    const comp = $('#composer'); if (!comp || comp.text.value || comp.file.files.length) return;
+    const before = DB.messages.length;
+    try { await loadState(); } catch (e) { return; }
+    if (DB.messages.length !== before && location.hash.startsWith('#/messages')) route();
+  }, 8000);
+}
+/* every page change also brings fresh data from the server */
+window.addEventListener('hashchange', async () => { closeModal(); try { await loadState(); } catch (e) { /* show what we have */ } route(); });
+$('#app').innerHTML = '<div class="loading">טוען...</div>';
+loadState().then(route).catch(() => { $('#app').innerHTML = '<div class="wrap"><div class="empty" style="margin-top:40px">אין חיבור לשרת. <a href="javascript:location.reload()">לנסות שוב</a></div></div>'; });
+</script>
+</body>
+</html>

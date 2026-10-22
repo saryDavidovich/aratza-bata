@@ -221,6 +221,7 @@ button:hover{background:#1d4ed8}
 <p><a href="/judge" style="color:#2563eb;text-decoration:none;font-weight:bold">🧑‍⚖️ תמלול משולב - Gemini + OpenAI + שופט ששומע ומכריע ←</a></p>
 <p><a href="/designer" style="color:#2563eb;text-decoration:none;font-weight:bold">🖌️ שולחן עיצוב - שינוי עיצוב של עמודים קיימים ←</a></p>
 <p><a href="/luach/" style="color:#2563eb;text-decoration:none;font-weight:bold">🏠 לוח המודעות - נדל״ן לציבור החרדי (בטא) ←</a></p>
+<p><a href="/miktzoa/" style="color:#2563eb;text-decoration:none;font-weight:bold">🧰 מקצוע ביד - אתר הקורסים (פעיל) ←</a></p>
 <p><a href="/miktzoa-demo" style="color:#2563eb;text-decoration:none;font-weight:bold">🧰 מקצוע ביד - הדגמה של אתר הקורסים ←</a></p>
 {% if message %}<div class="msg {{ 'ok' if ok else 'err' }}">{{ message }}</div>{% endif %}
 <form method="post" action="/run" enctype="multipart/form-data">
@@ -758,6 +759,14 @@ def miktzoa_demo():
     resp = send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'courses', 'demo.html'), mimetype='text/html')
     resp.headers['Cache-Control'] = 'no-cache'
     return resp
+
+
+# ============================================================
+# מקצוע ביד - האתר הפעיל (/miktzoa): שרת, נתונים, תשלומים ושיעורי וידאו - התיקייה miktzoa/
+# ============================================================
+from miktzoa import init_miktzoa  # noqa: E402
+
+init_miktzoa(app)
 
 
 if __name__ == '__main__':

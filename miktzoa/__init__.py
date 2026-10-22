@@ -1272,7 +1272,15 @@ def init_miktzoa(app):
             seed = hashlib.sha256(('luach-session|' + os.environ['LAB_ACCESS_CODE']).encode()).hexdigest()
         app.secret_key = seed or secrets.token_hex(32)
     app.config.setdefault('PERMANENT_SESSION_LIFETIME', timedelta(days=60))
-    os.makedirs(DATA_DIR, exist_ok=True)
-    _init_db()
+    global DATA_DIR, DB_PATH, FILES_DIR
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        _init_db()
+    except Exception as e:   # e.g. /data not writable: keep the site up with a local folder
+        log.error(f'miktzoa: cannot use {DATA_DIR} ({e}); falling back to the project folder')
+        DATA_DIR = os.path.dirname(HERE)
+        DB_PATH = os.path.join(DATA_DIR, 'miktzoa.db')
+        FILES_DIR = os.path.join(DATA_DIR, 'miktzoa_files')
+        _init_db()
     app.teardown_appcontext(_close)
     app.register_blueprint(bp)

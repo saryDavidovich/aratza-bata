@@ -764,9 +764,11 @@ def miktzoa_demo():
 # ============================================================
 # מקצוע ביד - האתר הפעיל (/miktzoa): שרת, נתונים, תשלומים ושיעורי וידאו - התיקייה miktzoa/
 # ============================================================
-from miktzoa import init_miktzoa  # noqa: E402
-
-init_miktzoa(app)
+try:  # a problem here must never take down the rest of the lab
+    from miktzoa import init_miktzoa  # noqa: E402
+    init_miktzoa(app)
+except Exception:
+    logging.getLogger(__name__).exception('miktzoa failed to start')
 
 
 if __name__ == '__main__':
